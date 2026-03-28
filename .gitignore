@@ -105,3 +105,14 @@ media/
 coverage/
 playwright-report/
 test-results/
+frontend\package.json
+frontend\package-lock.json
+frontend\eslint.config.js
+frontend\tsconfig.app.json
+frontend\tsconfig.json
+frontend\vite.config.ts
+frontend\tsconfig.node.json
+package-lock.json
+package.json
+frontend\node_modules
+node_modules
