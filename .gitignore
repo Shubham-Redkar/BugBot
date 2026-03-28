@@ -1,0 +1,107 @@
+# =========================
+# ROOT / GENERAL
+# =========================
+.env
+.env.*
+!.env.example
+
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+.DS_Store
+Thumbs.db
+
+.vscode/
+.idea/
+
+# =========================
+# FRONTEND (React / Vite / CRA)
+# =========================
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+frontend/.vite/
+frontend/.cache/
+frontend/coverage/
+
+# React env files
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+
+# TypeScript
+frontend/*.tsbuildinfo
+
+# =========================
+# BACKEND (FastAPI / Python)
+# =========================
+backend/__pycache__/
+backend/*.py[cod]
+backend/*$py.class
+
+# Virtual environments
+backend/venv/
+backend/.venv/
+backend/env/
+backend/ENV/
+
+# Python packaging
+backend/build/
+backend/dist/
+backend/*.egg-info/
+backend/.eggs/
+
+# Testing / cache
+backend/.pytest_cache/
+backend/.mypy_cache/
+backend/.ruff_cache/
+backend/.coverage
+backend/htmlcov/
+backend/.tox/
+backend/.nox/
+
+# Jupyter
+backend/.ipynb_checkpoints/
+
+# FastAPI env files
+backend/.env
+backend/.env.*
+!backend/.env.example
+
+# SQLite (if used for testing)
+backend/*.db
+backend/*.sqlite3
+
+# =========================
+# MONGODB (LOCAL ONLY)
+# =========================
+mongodb/data/
+data/db/
+dump/
+
+# =========================
+# FILE UPLOADS / GENERATED
+# =========================
+uploads/
+temp/
+tmp/
+media/
+
+# =========================
+# OPTIONAL: SECRETS / KEYS
+# =========================
+*.pem
+*.key
+*.crt
+*.p12
+
+# =========================
+# OPTIONAL: TEST OUTPUT
+# =========================
+coverage/
+playwright-report/
+test-results/
