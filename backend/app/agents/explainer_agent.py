@@ -1,14 +1,47 @@
 import asyncio
+import re
 from services.llm_service import call_llm
 
-SYSTEM_PROMPT = (
-    "You are a senior QA engineer. Given a website issue, provide a concise explanation, "
-    "its user/business impact, and a practical fix. Be specific and actionable. "
-    "Respond in exactly this format with no extra text:\n"
-    "EXPLANATION: <one or two sentences>\n"
-    "IMPACT: <one sentence>\n"
-    "FIX: <one or two sentences>"
-)
+SYSTEM_PROMPT = """
+You are a senior QA engineer. Given a website issue, provide:
+1. A concise explanation
+2. Its user/business impact
+3. A practical fix
+
+Respond ONLY in this exact format:
+
+EXPLANATION: <one or two sentences>
+IMPACT: <one sentence>
+FIX: <one or two sentences>
+"""
+
+
+def parse_llm_response(raw: str) -> tuple[str, str, str]:
+    """
+    Parse LLM output safely even if formatting varies slightly.
+    """
+    explanation = ""
+    impact = ""
+    fix = ""
+
+    # Normalize weird spacing
+    raw = raw.strip()
+
+    # Regex-based parsing (case-insensitive, multiline safe)
+    explanation_match = re.search(r"EXPLANATION:\s*(.*?)(?=\n[A-Z ]+:|$)", raw, re.IGNORECASE | re.DOTALL)
+    impact_match = re.search(r"IMPACT:\s*(.*?)(?=\n[A-Z ]+:|$)", raw, re.IGNORECASE | re.DOTALL)
+    fix_match = re.search(r"FIX:\s*(.*?)(?=\n[A-Z ]+:|$)", raw, re.IGNORECASE | re.DOTALL)
+
+    if explanation_match:
+        explanation = explanation_match.group(1).strip()
+
+    if impact_match:
+        impact = impact_match.group(1).strip()
+
+    if fix_match:
+        fix = fix_match.group(1).strip()
+
+    return explanation, impact, fix
 
 
 async def explain_issue(issue: dict) -> dict:
@@ -21,15 +54,19 @@ async def explain_issue(issue: dict) -> dict:
 
     try:
         raw = await call_llm(prompt, system=SYSTEM_PROMPT)
-        explanation, impact, fix = "", "", ""
+        print(f"[explainer_agent] Raw LLM response:\n{raw}\n")
 
-        for line in raw.splitlines():
-            if line.startswith("EXPLANATION:"):
-                explanation = line.removeprefix("EXPLANATION:").strip()
-            elif line.startswith("IMPACT:"):
-                impact = line.removeprefix("IMPACT:").strip()
-            elif line.startswith("FIX:"):
-                fix = line.removeprefix("FIX:").strip()
+        explanation, impact, fix = parse_llm_response(raw)
+
+        # Fallback defaults if model output is messy
+        if not explanation:
+            explanation = "This issue may indicate missing or weak frontend validation behavior."
+
+        if not impact:
+            impact = "Users may experience confusion, poor UX, or invalid data submission."
+
+        if not fix:
+            fix = "Add proper frontend and backend validation, and show clear inline error messages."
 
         issue["explanation"] = explanation
         issue["impact"] = impact
@@ -37,9 +74,10 @@ async def explain_issue(issue: dict) -> dict:
 
     except Exception as e:
         print(f"[explainer_agent] LLM failed for {issue.get('page')}: {e}")
-        issue.setdefault("explanation", "")
-        issue.setdefault("impact", "")
-        issue.setdefault("fix_suggestion", "")
+
+        issue["explanation"] = "Unable to generate explanation automatically."
+        issue["impact"] = "Potential usability or reliability issue."
+        issue["fix_suggestion"] = "Review this issue manually and apply validation or UI improvements."
 
     return issue
 
