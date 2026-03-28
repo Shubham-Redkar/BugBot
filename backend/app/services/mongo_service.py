@@ -7,10 +7,8 @@ async def save_scan_result(scan_data: dict):
 
 async def get_scan_result(scan_id: str):
     result = await collection.find_one({"_id": ObjectId(scan_id)})
-
     if result:
         result["_id"] = str(result["_id"])
-
     return result
 
 async def update_scan_result(scan_id: str, update_data: dict):
@@ -18,13 +16,3 @@ async def update_scan_result(scan_id: str, update_data: dict):
         {"_id": ObjectId(scan_id)},
         {"$set": update_data}
     )
-
-async def get_all_scans():
-    scans = []
-    cursor = collection.find().sort("_id", -1)
-
-    async for scan in cursor:
-        scan["_id"] = str(scan["_id"])
-        scans.append(scan)
-
-    return scans
