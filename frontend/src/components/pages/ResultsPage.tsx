@@ -1,4 +1,4 @@
-import { type FC, useEffect, useState } from "react";
+import { type FC, useEffect, useRef, useState } from "react";
 import { downloadHTMLReport, downloadPDFReport } from "../../lib/reports";
 import type { DlState, Filter, Issue, ScanResults } from "../../types";
 import AnimatedCounter from "../ui/AnimatedCounter";
@@ -677,27 +677,39 @@ const ResultsPage: FC<ResultsPageProps> = ({ results, onReset }) => {
             />
           ))}
         </div>
-        {/* Health Score */}
-        <div
-          className="fade-up mb-6 rounded-[4px] px-4 py-4"
-          style={{
-            border: `1px solid ${healthColor}20`,
-            background: "rgba(255,255,255,0.01)",
-          }}
-        >
-          {/* Label */}
-          <div className="flex justify-between items-center mb-2">
+      </div>
+
+      {/* Health Score */}
+      <div
+        className="fade-up mb-6 rounded-[4px] px-4 py-4"
+        style={{
+          border: `1px solid ${healthColor}22`,
+          background: "rgba(255,255,255,0.01)",
+          animationDelay: "0.2s",
+        }}
+      >
+        <div className="flex justify-between items-center mb-2">
+          <span
+            className="font-mono-tech"
+            style={{
+              fontSize: "9px",
+              letterSpacing: "0.15em",
+              color: "rgba(255,255,255,0.35)",
+            }}
+          >
+            WEBSITE HEALTH SCORE
+          </span>
+          <div className="flex items-center gap-3">
             <span
               className="font-mono-tech"
               style={{
-                fontSize: "9px",
+                fontSize: "8px",
                 letterSpacing: "0.15em",
-                color: "rgba(255,255,255,0.4)",
+                color: healthColor,
               }}
             >
-              WEBSITE HEALTH SCORE
+              {healthStatus.toUpperCase()}
             </span>
-
             <span
               className="font-orbitron font-black"
               style={{
@@ -709,40 +721,21 @@ const ResultsPage: FC<ResultsPageProps> = ({ results, onReset }) => {
               {healthScore}%
             </span>
           </div>
-
-          {/* Progress Bar */}
+        </div>
+        <div
+          className="h-[5px] w-full rounded-full overflow-hidden"
+          style={{ background: "#0a0a0a" }}
+        >
           <div
-            className="h-[6px] w-full rounded-full overflow-hidden"
-            style={{ background: "#0a0a0a" }}
-          >
-            <div
-              style={{
-                width: `${healthScore}%`,
-                height: "100%",
-                background: healthColor,
-                boxShadow: `0 0 10px ${healthColor}, 0 0 20px ${healthColor}`,
-                transition: "width 0.6s ease",
-              }}
-            />
-          </div>
-
-          {/* Status Text */}
-          <div
-            className="font-mono-tech mt-2"
             style={{
-              fontSize: "8px",
-              letterSpacing: "0.12em",
-              color: healthColor,
+              width: `${healthScore}%`,
+              height: "100%",
+              background: healthColor,
+              boxShadow: `0 0 10px ${healthColor}, 0 0 20px ${healthColor}55`,
+              borderRadius: "999px",
+              transition: "width 0.8s cubic-bezier(0.34,1.1,0.64,1)",
             }}
-          >
-            {healthStatus === "Excellent" || healthStatus === "Good"
-              ? "SYSTEM STABLE"
-              : healthStatus === "Fair"
-                ? "ATTENTION REQUIRED"
-                : healthStatus === "Error"
-                  ? "SCAN ERROR — CHECK BACKEND"
-                  : "CRITICAL RISK DETECTED"}
-          </div>
+          />
         </div>
       </div>
 

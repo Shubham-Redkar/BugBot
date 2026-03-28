@@ -1,15 +1,15 @@
 import type { Issue, ScanResults, Severity } from "../types";
 
 const SEV_COLOR: Record<Severity, string> = {
-  High:   "#FF0040",
+  High: "#FF0040",
   Medium: "#FFB400",
-  Low:    "#00AACC",
+  Low: "#00AACC",
 };
 
 const SEV_BG: Record<Severity, string> = {
-  High:   "#fff0f3",
+  High: "#fff0f3",
   Medium: "#fffbf0",
-  Low:    "#f0faff",
+  Low: "#f0faff",
 };
 
 // ─── PDF REPORT STYLES (clean white, fully print-safe) ───────────────────────
@@ -282,6 +282,34 @@ body {
 }
 .fix-val { color: #1a7a50 !important; font-weight: 500; }
 
+/* Screenshot */
+.screenshot-block {
+  margin-bottom: 12px;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid #e0e4f0;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+.screenshot-label {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 7px;
+  letter-spacing: 0.18em;
+  color: #aaa;
+  padding: 5px 10px;
+  background: #f8f9ff;
+  border-bottom: 1px solid #e0e4f0;
+}
+.screenshot-block img {
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  object-position: top;
+  display: block;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
 /* Footer */
 .report-footer {
   margin-top: 36px;
@@ -543,29 +571,40 @@ const SEV_WEIGHT: Record<Severity, number> = { High: 10, Medium: 5, Low: 2 };
 
 function pdfRiskColor(score: number, max: number): string {
   const t = max === 0 ? 0 : Math.min(score / max, 1);
-  if (t === 0)   return "#f0f0f5";
-  if (t < 0.3)   return `rgba(0,170,204,${0.3 + t * 0.5})`;
-  if (t < 0.6)   return `rgba(255,180,0,${0.35 + t * 0.4})`;
-  return             `rgba(255,0,64,${0.4 + t * 0.45})`;
+  if (t === 0) return "#f0f0f5";
+  if (t < 0.3) return `rgba(0,170,204,${0.3 + t * 0.5})`;
+  if (t < 0.6) return `rgba(255,180,0,${0.35 + t * 0.4})`;
+  return `rgba(255,0,64,${0.4 + t * 0.45})`;
 }
 
-function pdfRiskLabel(score: number, max: number): { label: string; color: string } {
+function pdfRiskLabel(
+  score: number,
+  max: number,
+): { label: string; color: string } {
   const t = max === 0 ? 0 : score / max;
-  if (t === 0)   return { label: "CLEAN",    color: "#aaa" };
-  if (t < 0.3)   return { label: "LOW RISK", color: "#0088cc" };
-  if (t < 0.6)   return { label: "MODERATE", color: "#cc8800" };
-  return             { label: "CRITICAL",  color: "#FF0040" };
+  if (t === 0) return { label: "CLEAN", color: "#aaa" };
+  if (t < 0.3) return { label: "LOW RISK", color: "#0088cc" };
+  if (t < 0.6) return { label: "MODERATE", color: "#cc8800" };
+  return { label: "CRITICAL", color: "#FF0040" };
 }
 
-const CELL_STYLE: Record<string, { bg: string; border: string; dot: string; text: string }> = {
-  High:   { bg: "#fff0f3", border: "#FF004055", dot: "#FF0040", text: "#FF0040" },
-  Medium: { bg: "#fffbf0", border: "#FFB40055", dot: "#FFB400", text: "#cc8800" },
-  Low:    { bg: "#f0faff", border: "#00AACC55", dot: "#00AACC", text: "#0088cc" },
-  none:   { bg: "#f8f9ff", border: "#e0e4f0",  dot: "",        text: "#ccc"    },
+const CELL_STYLE: Record<
+  string,
+  { bg: string; border: string; dot: string; text: string }
+> = {
+  High: { bg: "#fff0f3", border: "#FF004055", dot: "#FF0040", text: "#FF0040" },
+  Medium: {
+    bg: "#fffbf0",
+    border: "#FFB40055",
+    dot: "#FFB400",
+    text: "#cc8800",
+  },
+  Low: { bg: "#f0faff", border: "#00AACC55", dot: "#00AACC", text: "#0088cc" },
+  none: { bg: "#f8f9ff", border: "#e0e4f0", dot: "", text: "#ccc" },
 };
 
 function buildHeatmapHTML(issues: Issue[]): string {
-  const pages      = Array.from(new Set(issues.map((i) => i.page)));
+  const pages = Array.from(new Set(issues.map((i) => i.page)));
   const issueTypes = Array.from(new Set(issues.map((i) => i.issue_type)));
 
   // Matrix: page → issueType → worst severity
@@ -573,10 +612,15 @@ function buildHeatmapHTML(issues: Issue[]): string {
   for (const page of pages) {
     matrix[page] = {};
     for (const type of issueTypes) {
-      const matches = issues.filter((i) => i.page === page && i.issue_type === type);
-      if (matches.length === 0) { matrix[page][type] = null; continue; }
+      const matches = issues.filter(
+        (i) => i.page === page && i.issue_type === type,
+      );
+      if (matches.length === 0) {
+        matrix[page][type] = null;
+        continue;
+      }
       const hasHigh = matches.some((m) => m.severity === "High");
-      const hasMed  = matches.some((m) => m.severity === "Medium");
+      const hasMed = matches.some((m) => m.severity === "Medium");
       matrix[page][type] = hasHigh ? "High" : hasMed ? "Medium" : "Low";
     }
   }
@@ -584,34 +628,44 @@ function buildHeatmapHTML(issues: Issue[]): string {
   // Per-page risk score
   const pageScores: Record<string, number> = {};
   for (const page of pages)
-    pageScores[page] = issues.filter((i) => i.page === page).reduce((a, i) => a + SEV_WEIGHT[i.severity], 0);
+    pageScores[page] = issues
+      .filter((i) => i.page === page)
+      .reduce((a, i) => a + SEV_WEIGHT[i.severity], 0);
   const maxScore = Math.max(...Object.values(pageScores), 1);
 
   // Column headers
-  const colHeaders = issueTypes.map((type) => `
+  const colHeaders = issueTypes
+    .map(
+      (type) => `
     <th>
       <span class="matrix-col-line"></span>
       ${type.toUpperCase()}
-    </th>`).join("");
+    </th>`,
+    )
+    .join("");
 
   // Matrix rows
-  const matrixRows = pages.map((page) => {
-    const cells = issueTypes.map((type) => {
-      const sev = matrix[page][type];
-      const s   = CELL_STYLE[sev ?? "none"];
-      const inner = sev
-        ? `<div class="cell-inner">
+  const matrixRows = pages
+    .map((page) => {
+      const cells = issueTypes
+        .map((type) => {
+          const sev = matrix[page][type];
+          const s = CELL_STYLE[sev ?? "none"];
+          const inner = sev
+            ? `<div class="cell-inner">
             <span class="cell-dot" style="background:${s.dot};"></span>
             <span class="cell-label" style="color:${s.text};">${sev.toUpperCase()}</span>
            </div>`
-        : `<div class="cell-inner"><span class="cell-empty">—</span></div>`;
-      return `<td class="matrix-cell" style="background:${s.bg};border:1px solid ${s.border};">${inner}</td>`;
-    }).join("");
-    return `<tr>
+            : `<div class="cell-inner"><span class="cell-empty">—</span></div>`;
+          return `<td class="matrix-cell" style="background:${s.bg};border:1px solid ${s.border};">${inner}</td>`;
+        })
+        .join("");
+      return `<tr>
       <td class="matrix-row-label">${page}</td>
       ${cells}
     </tr>`;
-  }).join("");
+    })
+    .join("");
 
   // Risk bars (sorted high → low)
   const riskBars = pages
@@ -619,16 +673,22 @@ function buildHeatmapHTML(issues: Issue[]): string {
     .sort((a, b) => pageScores[b] - pageScores[a])
     .map((page) => {
       const score = pageScores[page];
-      const pct   = (score / maxScore) * 100;
+      const pct = (score / maxScore) * 100;
       const { label, color } = pdfRiskLabel(score, maxScore);
       const fillColor = pdfRiskColor(score, maxScore);
 
       const pills = issues
         .filter((i) => i.page === page)
         .map((iss) => {
-          const pc = iss.severity === "High" ? "#FF0040" : iss.severity === "Medium" ? "#FFB400" : "#00AACC";
+          const pc =
+            iss.severity === "High"
+              ? "#FF0040"
+              : iss.severity === "Medium"
+                ? "#FFB400"
+                : "#00AACC";
           return `<span class="risk-pill" style="background:${pc}18;border-color:${pc}55;color:${pc}cc;">${iss.issue_type}</span>`;
-        }).join("");
+        })
+        .join("");
 
       return `
         <div class="risk-row">
@@ -644,7 +704,8 @@ function buildHeatmapHTML(issues: Issue[]): string {
           </div>
           <div class="risk-pills">${pills}</div>
         </div>`;
-    }).join("");
+    })
+    .join("");
 
   return `
   <div class="heatmap-wrap">
@@ -693,17 +754,29 @@ function buildHeatmapHTML(issues: Issue[]): string {
   </div>`;
 }
 
-function buildPDFHTML(results: ScanResults): string {
-  const now     = new Date();
-  const dateStr = now.toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" });
-  const timeStr = now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
-  const high    = results.issues.filter((i) => i.severity === "High").length;
-  const med     = results.issues.filter((i) => i.severity === "Medium").length;
-  const low     = results.issues.filter((i) => i.severity === "Low").length;
-  const total   = results.issues_found;
-  const pct     = (n: number) => (total === 0 ? 0 : Math.round((n / total) * 100));
+function buildPDFHTML(
+  results: ScanResults,
+  b64map: Map<string, string> = new Map(),
+): string {
+  const now = new Date();
+  const dateStr = now.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+  const timeStr = now.toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const high = results.issues.filter((i) => i.severity === "High").length;
+  const med = results.issues.filter((i) => i.severity === "Medium").length;
+  const low = results.issues.filter((i) => i.severity === "Low").length;
+  const total = results.issues_found;
+  const pct = (n: number) => (total === 0 ? 0 : Math.round((n / total) * 100));
 
-  const issueRows = results.issues.map((iss, idx) => `
+  const issueRows = results.issues
+    .map(
+      (iss, idx) => `
     <div class="issue sev-${iss.severity}">
       <div class="issue-header">
         <span class="issue-num">${String(idx + 1).padStart(2, "0")}</span>
@@ -714,6 +787,7 @@ function buildPDFHTML(results: ScanResults): string {
         </div>
       </div>
       <p class="issue-desc">${iss.description}</p>
+      ${screenshotSnippet(iss.screenshot, b64map)}
       <div class="ai-grid">
         <div class="ai-block analysis-block">
           <div class="ai-label">◈ NEURAL ANALYSIS</div>
@@ -728,7 +802,9 @@ function buildPDFHTML(results: ScanResults): string {
           <div class="ai-val fix-val">${iss.fix_suggestion}</div>
         </div>
       </div>
-    </div>`).join("");
+    </div>`,
+    )
+    .join("");
 
   return `<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8"/>
@@ -843,18 +919,31 @@ body::before{content:'';position:fixed;inset:0;background-image:radial-gradient(
 .ai-label{font-family:'Share Tech Mono',monospace;font-size:7px;letter-spacing:0.16em;color:#334;}
 .ai-val{font-size:12px;color:#556;line-height:1.65;margin-top:5px;}
 .fix-val{color:rgba(0,245,255,0.75)!important;}
+.screenshot-block{margin-bottom:14px;border-radius:4px;overflow:hidden;border:1px solid rgba(0,245,255,0.1);}
+.screenshot-label{font-family:'Share Tech Mono',monospace;font-size:7px;letter-spacing:0.18em;color:rgba(0,245,255,0.4);padding:5px 10px;background:rgba(0,245,255,0.03);border-bottom:1px solid rgba(0,245,255,0.08);}
+.screenshot-block img{width:100%;max-height:220px;object-fit:cover;object-position:top;display:block;}
 .report-footer{margin-top:60px;padding-top:20px;border-top:1px solid #111;display:flex;justify-content:space-between;font-family:'Share Tech Mono',monospace;font-size:9px;color:#222;}
 `;
 
-function buildHTMLReport(results: ScanResults): string {
-  const now     = new Date();
-  const dateStr = now.toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" });
-  const timeStr = now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
-  const high    = results.issues.filter((i) => i.severity === "High").length;
-  const med     = results.issues.filter((i) => i.severity === "Medium").length;
-  const low     = results.issues.filter((i) => i.severity === "Low").length;
-  const total   = results.issues_found;
-  const pct     = (n: number) => (total === 0 ? 0 : Math.round((n / total) * 100));
+function buildHTMLReport(
+  results: ScanResults,
+  b64map: Map<string, string> = new Map(),
+): string {
+  const now = new Date();
+  const dateStr = now.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+  const timeStr = now.toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const high = results.issues.filter((i) => i.severity === "High").length;
+  const med = results.issues.filter((i) => i.severity === "Medium").length;
+  const low = results.issues.filter((i) => i.severity === "Low").length;
+  const total = results.issues_found;
+  const pct = (n: number) => (total === 0 ? 0 : Math.round((n / total) * 100));
 
   return `<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8"/>
@@ -898,7 +987,7 @@ function buildHTMLReport(results: ScanResults): string {
     </div>
   </div>
   <div class="section-title">DETECTED ANOMALIES — FULL INTELLIGENCE REPORT</div>
-  ${buildIssueRows(results.issues)}
+  ${buildIssueRows(results.issues, b64map)}
   <div class="report-footer">
     <span>BugBot · Autonomous QA Nexus · v2.4.1</span>
     <span>${dateStr}</span>
@@ -907,8 +996,13 @@ function buildHTMLReport(results: ScanResults): string {
 }
 
 // ── Shared issue row builder for dark HTML report ─────────────────────────────
-function buildIssueRows(issues: Issue[]): string {
-  return issues.map((iss, idx) => `
+function buildIssueRows(
+  issues: Issue[],
+  b64map: Map<string, string> = new Map(),
+): string {
+  return issues
+    .map(
+      (iss, idx) => `
     <div class="issue">
       <div class="issue-header">
         <span class="issue-num">${String(idx + 1).padStart(2, "0")}</span>
@@ -919,36 +1013,94 @@ function buildIssueRows(issues: Issue[]): string {
         </div>
       </div>
       <p class="issue-desc">${iss.description}</p>
+      ${screenshotSnippet(iss.screenshot, b64map)}
       <div class="ai-grid">
         <div class="ai-block"><div class="ai-label">◈ NEURAL ANALYSIS</div><div class="ai-val">${iss.explanation}</div></div>
         <div class="ai-block"><div class="ai-label">◎ IMPACT VECTOR</div><div class="ai-val">${iss.impact}</div></div>
         <div class="ai-block fix-block"><div class="ai-label">⬡ REMEDIATION PROTOCOL</div><div class="ai-val fix-val">${iss.fix_suggestion}</div></div>
       </div>
-    </div>`).join("");
+    </div>`,
+    )
+    .join("");
+}
+
+// ── Screenshot → base64 helper ───────────────────────────────────────────────
+
+async function fetchBase64(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const buf = await res.arrayBuffer();
+    const bytes = new Uint8Array(buf);
+    let binary = "";
+    for (let i = 0; i < bytes.byteLength; i++)
+      binary += String.fromCharCode(bytes[i]);
+    return `data:image/png;base64,${btoa(binary)}`;
+  } catch {
+    return null;
+  }
+}
+
+async function resolveScreenshots(
+  issues: Issue[],
+): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  const urls = Array.from(
+    new Set(issues.map((i) => i.screenshot).filter(Boolean)),
+  ) as string[];
+  await Promise.all(
+    urls.map(async (url) => {
+      const b64 = await fetchBase64(url);
+      if (b64) map.set(url, b64);
+    }),
+  );
+  return map;
+}
+
+// ── Screenshot HTML snippet helper ───────────────────────────────────────────
+
+function screenshotSnippet(
+  url: string | null | undefined,
+  b64map: Map<string, string>,
+): string {
+  if (!url) return "";
+  const src = b64map.get(url);
+  if (!src) return "";
+  return `
+    <div class="screenshot-block">
+      <div class="screenshot-label">◉ PAGE SCREENSHOT</div>
+      <img src="${src}" alt="page screenshot" />
+    </div>`;
 }
 
 // ── Public exports ────────────────────────────────────────────────────────────
 
-export function downloadHTMLReport(results: ScanResults): void {
-  const html = buildHTMLReport(results);
+export async function downloadHTMLReport(results: ScanResults): Promise<void> {
+  const b64map = await resolveScreenshots(results.issues);
+  const html = buildHTMLReport(results, b64map);
   const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement("a");
-  const host = results.url.replace(/https?:\/\//, "").replace(/\//g, "_").replace(/\./g, "-");
-  a.href     = url;
+  const blobUrl = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const host = results.url
+    .replace(/https?:\/\//, "")
+    .replace(/\//g, "_")
+    .replace(/\./g, "-");
+  a.href = blobUrl;
   a.download = `bugbot-report-${host}.html`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  URL.revokeObjectURL(blobUrl);
 }
 
-export function downloadPDFReport(results: ScanResults): void {
-  const html   = buildPDFHTML(results);
-  const blob   = new Blob([html], { type: "text/html;charset=utf-8" });
-  const url    = URL.createObjectURL(blob);
+export async function downloadPDFReport(results: ScanResults): Promise<void> {
+  const b64map = await resolveScreenshots(results.issues);
+  const html = buildPDFHTML(results, b64map);
+  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
   const iframe = document.createElement("iframe");
-  iframe.style.cssText = "position:fixed;width:0;height:0;opacity:0;border:none;";
+  iframe.style.cssText =
+    "position:fixed;width:0;height:0;opacity:0;border:none;";
   iframe.src = url;
   document.body.appendChild(iframe);
   setTimeout(() => {
@@ -958,6 +1110,6 @@ export function downloadPDFReport(results: ScanResults): void {
 }
 
 // Legacy alias
-export function downloadReport(results: ScanResults): void {
-  downloadHTMLReport(results);
+export async function downloadReport(results: ScanResults): Promise<void> {
+  return downloadHTMLReport(results);
 }

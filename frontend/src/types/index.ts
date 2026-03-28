@@ -11,6 +11,7 @@ export interface Issue {
   explanation: string;
   impact: string;
   fix_suggestion: string;
+  screenshot?: string | null;
 }
 
 export interface ScanResults {
@@ -19,8 +20,7 @@ export interface ScanResults {
   issues_found: number;
   issues: Issue[];
   health_score: number; // 0–100
-  health_status: string; // "Excellent" | "Good" | "Fair" | "Poor"
-  summary: { high: number; medium: number; low: number };
+  health_status: string; // "GOOD" | "WARNING" | "CRITICAL"
 }
 
 export interface LogLine {
