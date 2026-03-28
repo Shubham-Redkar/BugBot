@@ -1,758 +1,363 @@
 import type { Issue, ScanResults, Severity } from "../types";
 
+// ─── Severity colour maps ─────────────────────────────────────────────────────
+
 const SEV_COLOR: Record<Severity, string> = {
   High: "#FF0040",
   Medium: "#FFB400",
   Low: "#00AACC",
 };
 
-const SEV_BG: Record<Severity, string> = {
-  High: "#fff0f3",
-  Medium: "#fffbf0",
-  Low: "#f0faff",
+// Muted print-safe palette for PDF
+const C: Record<Severity, { fg: string; bg: string; border: string }> = {
+  High: { fg: "#c53030", bg: "#fff5f5", border: "#fc8181" },
+  Medium: { fg: "#b7791f", bg: "#fffff0", border: "#f6e05e" },
+  Low: { fg: "#2b6cb0", bg: "#ebf8ff", border: "#90cdf4" },
 };
 
-// ─── PDF REPORT STYLES (clean white, fully print-safe) ───────────────────────
-const PDF_STYLES = `
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Share+Tech+Mono&family=Inter:wght@400;500;600;700&display=swap');
+// ─── PDF STYLES ───────────────────────────────────────────────────────────────
 
-@page { size: A4; margin: 14mm 16mm; }
+const PDF_STYLES = `
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap');
+
+@page { size: A4; margin: 18mm 20mm; }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  background: #ffffff;
-  color: #1a1a2e;
-  font-family: 'Inter', sans-serif;
-  font-size: 12px;
+  background: #fff;
+  color: #111;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
   line-height: 1.6;
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
 }
 
-.page { max-width: 780px; margin: 0 auto; }
+.page { max-width: 740px; margin: 0 auto; }
 
 /* Header */
 .report-header {
   display: flex;
-  align-items: flex-start;
+  align-items: flex-end;
   justify-content: space-between;
-  padding-bottom: 18px;
-  margin-bottom: 24px;
-  border-bottom: 2px solid #1a1a2e;
+  padding-bottom: 14px;
+  margin-bottom: 28px;
+  border-bottom: 2px solid #111;
 }
 .logo {
-  font-family: 'Orbitron', monospace;
-  font-weight: 900;
-  font-size: 22px;
-  color: #1a1a2e;
-  letter-spacing: 0.04em;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 600;
+  font-size: 20px;
+  color: #111;
+  letter-spacing: -0.01em;
 }
 .logo-tag {
-  font-family: 'Share Tech Mono', monospace;
+  font-family: 'DM Mono', monospace;
   font-size: 8px;
   color: #999;
-  letter-spacing: 0.18em;
-  margin-top: 4px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-top: 2px;
 }
 .report-meta {
   text-align: right;
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 8.5px;
-  color: #aaa;
-  line-height: 2;
-}
-.report-meta strong { color: #333; }
-
-/* Hero bar */
-.hero {
-  background: #1a1a2e;
-  border-radius: 6px;
-  padding: 18px 22px;
-  margin-bottom: 18px;
-  -webkit-print-color-adjust: exact;
-  print-color-adjust: exact;
-}
-.hero-eyebrow {
-  font-family: 'Share Tech Mono', monospace;
+  font-family: 'DM Mono', monospace;
   font-size: 8px;
-  letter-spacing: 0.22em;
-  color: #00cc88;
-  margin-bottom: 7px;
+  color: #aaa;
+  line-height: 1.9;
+}
+.report-meta strong { color: #555; font-weight: 500; }
+
+/* Target URL */
+.target-block {
+  background: #f7f7f7;
+  border-radius: 6px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 10px;
 }
-.hero-eyebrow::before {
-  content: '';
-  display: inline-block;
-  width: 5px; height: 5px;
-  border-radius: 50%;
-  background: #00cc88;
-}
-.hero-url {
-  font-family: 'Orbitron', monospace;
-  font-weight: 900;
-  font-size: 14px;
-  color: #ffffff;
-  word-break: break-all;
-  margin-bottom: 5px;
-}
-.hero-sub {
-  font-family: 'Share Tech Mono', monospace;
+.target-label {
+  font-family: 'DM Mono', monospace;
   font-size: 8px;
-  color: #6677aa;
+  color: #aaa;
+  text-transform: uppercase;
   letter-spacing: 0.1em;
+  white-space: nowrap;
+}
+.target-url {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: #333;
+  word-break: break-all;
 }
 
-/* Metrics */
-.metrics {
+/* Summary cards */
+.summary {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: 10px;
+  margin-bottom: 20px;
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
 }
-.metric {
-  background: #f8f9ff;
-  border: 1px solid #e0e4f0;
-  border-radius: 5px;
-  padding: 13px 10px;
+.summary-card {
+  padding: 14px 12px;
+  border-radius: 6px;
+  background: #f7f7f7;
   text-align: center;
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
 }
-.metric-val {
-  font-family: 'Orbitron', monospace;
-  font-weight: 900;
-  font-size: 26px;
+.summary-val {
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 600;
+  font-size: 28px;
   line-height: 1;
+  letter-spacing: -0.02em;
 }
-.metric-label {
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 6.5px;
-  letter-spacing: 0.14em;
-  color: #aaa;
-  margin-top: 5px;
+.summary-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 7px;
+  color: #999;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-top: 6px;
 }
 
-/* Severity bar */
-.sev-bar-wrap {
-  background: #f8f9ff;
-  border: 1px solid #e0e4f0;
-  border-radius: 5px;
-  padding: 11px 16px;
-  margin-bottom: 26px;
-}
-.sev-bar-labels {
+/* Severity strip */
+.sev-row {
   display: flex;
-  justify-content: space-between;
-  margin-bottom: 8px;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 28px;
 }
-.sev-bar-labels span {
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 8.5px;
-  letter-spacing: 0.08em;
-  font-weight: 600;
+.sev-pills {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
 }
-.sev-bar {
+.sev-pill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  letter-spacing: 0.06em;
+  padding: 4px 10px;
+  border-radius: 99px;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+.sev-dot {
+  width: 6px;
   height: 6px;
-  border-radius: 999px;
-  background: #e8eaf0;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+.sev-bar-track {
+  flex: 1;
+  height: 4px;
+  border-radius: 99px;
+  background: #eee;
   overflow: hidden;
   display: flex;
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
 }
-.sev-seg { height: 100%; }
-
-/* Section title */
-.section-title {
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 8px;
-  letter-spacing: 0.22em;
-  color: #888;
-  margin-bottom: 12px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid #e0e4f0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.sev-seg {
+  height: 100%;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
 }
-.section-title::before {
-  content: '';
-  display: inline-block;
-  width: 3px; height: 3px;
-  border-radius: 50%;
-  background: #1a1a2e;
+
+/* Section heading */
+.section-heading {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #bbb;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #eee;
+}
+
+/* Page risk table */
+.risk-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 28px;
+}
+.risk-table th {
+  font-family: 'DM Mono', monospace;
+  font-size: 7px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #bbb;
+  font-weight: 500;
+  padding: 0 10px 8px 0;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+.risk-table td {
+  padding: 9px 10px 9px 0;
+  border-bottom: 1px solid #f2f2f2;
+  vertical-align: middle;
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  color: #555;
+}
+.risk-pills { display: flex; gap: 4px; flex-wrap: wrap; }
+.risk-pill {
+  font-family: 'DM Mono', monospace;
+  font-size: 7px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+.risk-badge {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 9px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 3px;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
 }
 
 /* Issue cards */
 .issue {
-  background: #fafafa;
-  border: 1px solid #e8eaf0;
-  border-left: 3px solid #ccc;
-  border-radius: 5px;
+  border: 1px solid #e8e8e8;
+  border-left: 3px solid #ddd;
+  border-radius: 6px;
   padding: 14px 16px 12px;
-  margin-bottom: 9px;
+  margin-bottom: 8px;
   break-inside: avoid;
   page-break-inside: avoid;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
 }
-.issue.sev-High   { border-left-color: #FF0040; }
-.issue.sev-Medium { border-left-color: #FFB400; }
-.issue.sev-Low    { border-left-color: #00AACC; }
+.issue.sev-High   { border-left-color: #e53e3e; }
+.issue.sev-Medium { border-left-color: #d69e2e; }
+.issue.sev-Low    { border-left-color: #3182ce; }
 
 .issue-header {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 7px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
 }
 .issue-num {
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 10px;
-  color: #bbb;
-  flex-shrink: 0;
-}
-.issue-meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  flex: 1;
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  color: #ccc;
 }
 .issue-type {
-  font-family: 'Orbitron', monospace;
-  font-weight: 700;
-  font-size: 11px;
-  color: #1a1a2e;
-  letter-spacing: 0.04em;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 600;
+  font-size: 12px;
+  color: #111;
+  flex: 1;
 }
-.sev-tag {
-  font-family: 'Share Tech Mono', monospace;
+.sev-badge {
+  font-family: 'DM Mono', monospace;
   font-size: 7.5px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  padding: 2px 7px;
-  border-radius: 2px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  padding: 2px 8px;
+  border-radius: 3px;
   border: 1px solid;
+  text-transform: uppercase;
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
 }
-.issue-page {
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 8.5px;
-  color: #999;
+.issue-page-url {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  color: #aaa;
 }
 .issue-desc {
-  font-size: 11.5px;
-  color: #4a5568;
+  font-size: 11px;
+  color: #555;
   line-height: 1.65;
-  margin-bottom: 11px;
+  margin-bottom: 10px;
 }
-.ai-grid {
+
+/* Screenshot */
+.screenshot-block {
+  margin-bottom: 10px;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid #eee;
+  break-inside: avoid;
+}
+.screenshot-block img {
+  width: 100%;
+  max-height: 200px;
+  object-fit: cover;
+  object-position: top;
+  display: block;
+}
+
+/* Insight grid */
+.insight-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 6px;
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
 }
-.fix-block { grid-column: 1 / -1; }
-.ai-block {
+.insight-full { grid-column: 1 / -1; }
+.insight-box {
+  background: #f7f7f7;
   border-radius: 4px;
   padding: 8px 10px;
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
 }
-.analysis-block { background: #f0f8ff; border: 1px solid #d0eaf8; }
-.impact-block   { background: #fffbf0; border: 1px solid #faebc0; }
-.fix-block      { background: #f0fff8; border: 1px solid #b8f0d8; }
-.ai-label {
-  font-family: 'Share Tech Mono', monospace;
+.insight-label {
+  font-family: 'DM Mono', monospace;
   font-size: 7px;
-  letter-spacing: 0.16em;
-  color: #999;
+  letter-spacing: 0.1em;
+  color: #bbb;
+  text-transform: uppercase;
   margin-bottom: 4px;
 }
-.ai-val {
-  font-size: 11px;
-  color: #4a5568;
+.insight-val {
+  font-size: 10.5px;
+  color: #444;
   line-height: 1.6;
 }
-.fix-val { color: #1a7a50 !important; font-weight: 500; }
-
-/* Screenshot */
-.screenshot-block {
-  margin-bottom: 12px;
-  border-radius: 4px;
-  overflow: hidden;
-  border: 1px solid #e0e4f0;
-  break-inside: avoid;
-  page-break-inside: avoid;
-}
-.screenshot-label {
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 7px;
-  letter-spacing: 0.18em;
-  color: #aaa;
-  padding: 5px 10px;
-  background: #f8f9ff;
-  border-bottom: 1px solid #e0e4f0;
-}
-.screenshot-block img {
-  width: 100%;
-  max-height: 220px;
-  object-fit: cover;
-  object-position: top;
-  display: block;
-  -webkit-print-color-adjust: exact;
-  print-color-adjust: exact;
-}
+.insight-fix { color: #2d6a4f !important; font-weight: 500; }
 
 /* Footer */
 .report-footer {
   margin-top: 36px;
-  padding-top: 14px;
-  border-top: 1px solid #e0e4f0;
+  padding-top: 12px;
+  border-top: 1px solid #eee;
   display: flex;
   justify-content: space-between;
-  font-family: 'Share Tech Mono', monospace;
+  font-family: 'DM Mono', monospace;
   font-size: 8px;
-  color: #bbb;
-}
-
-/* ── Heatmap section ── */
-.heatmap-wrap {
-  margin-bottom: 28px;
-  border: 1px solid #e0e4f0;
-  border-radius: 6px;
-  overflow: hidden;
-  break-inside: avoid;
-  page-break-inside: avoid;
-  -webkit-print-color-adjust: exact;
-  print-color-adjust: exact;
-}
-.heatmap-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 14px;
-  background: #1a1a2e;
-  -webkit-print-color-adjust: exact;
-  print-color-adjust: exact;
-}
-.heatmap-header-title {
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 8px;
-  letter-spacing: 0.2em;
-  color: #00ccaa;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-}
-.heatmap-header-title::before {
-  content: '';
-  display: inline-block;
-  width: 4px; height: 4px;
-  border-radius: 50%;
-  background: #00ccaa;
-}
-.heatmap-header-meta {
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 8px;
-  letter-spacing: 0.12em;
-  color: #6677aa;
-}
-.heatmap-body { padding: 14px; background: #ffffff; }
-.heatmap-sub {
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 8px;
-  letter-spacing: 0.18em;
-  color: #aaa;
-  margin-bottom: 12px;
-  text-align: center;
-}
-
-/* Matrix table */
-.matrix-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 3px;
-  margin-bottom: 14px;
-}
-.matrix-table th {
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 7.5px;
-  letter-spacing: 0.12em;
-  color: #7788aa;
-  font-weight: 700;
-  text-align: center;
-  padding-bottom: 8px;
-  white-space: nowrap;
-}
-.matrix-col-line {
-  display: block;
-  height: 2px;
-  border-radius: 1px;
-  background: #e8eaf0;
-  margin-bottom: 5px;
-}
-.matrix-row-label {
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 9px;
-  letter-spacing: 0.08em;
-  color: #556;
-  padding-right: 10px;
-  white-space: nowrap;
-  vertical-align: middle;
-  min-width: 80px;
-}
-.matrix-cell {
-  border-radius: 4px;
-  height: 46px;
-  min-width: 70px;
-  text-align: center;
-  vertical-align: middle;
-  -webkit-print-color-adjust: exact;
-  print-color-adjust: exact;
-}
-.cell-inner {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  gap: 3px;
-}
-.cell-dot {
-  width: 5px; height: 5px;
-  border-radius: 50%;
-  display: block;
-  -webkit-print-color-adjust: exact;
-  print-color-adjust: exact;
-}
-.cell-label {
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 7px;
-  letter-spacing: 0.1em;
-  font-weight: 700;
-}
-.cell-empty {
-  font-size: 11px;
   color: #ccc;
 }
 
-/* Matrix legend */
-.matrix-legend {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding-left: 90px;
-  margin-bottom: 18px;
-}
-.legend-item {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 7.5px;
-  letter-spacing: 0.1em;
-  font-weight: 700;
-}
-.legend-dot {
-  width: 7px; height: 7px;
-  border-radius: 50%;
-  -webkit-print-color-adjust: exact;
-  print-color-adjust: exact;
-}
-
-/* Divider */
-.heatmap-divider {
-  height: 1px;
-  background: #e8eaf0;
-  margin: 14px 0;
-}
-
-/* Risk bars */
-.risk-section-title {
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 8px;
-  letter-spacing: 0.18em;
-  color: #aaa;
-  margin-bottom: 10px;
-  text-align: center;
-}
-.risk-row { margin-bottom: 10px; }
-.risk-row-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 4px;
-}
-.risk-page {
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 9px;
-  letter-spacing: 0.1em;
-  color: #556;
-}
-.risk-right {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.risk-label {
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 8px;
-  letter-spacing: 0.14em;
-  font-weight: 700;
-}
-.risk-score {
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 9px;
-  color: #99a;
-  min-width: 24px;
-  text-align: right;
-}
-.risk-track {
-  height: 5px;
-  border-radius: 3px;
-  background: #f0f0f5;
-  overflow: hidden;
-  border: 1px solid #e8eaf0;
-  -webkit-print-color-adjust: exact;
-  print-color-adjust: exact;
-}
-.risk-fill {
-  height: 100%;
-  border-radius: 3px;
-  -webkit-print-color-adjust: exact;
-  print-color-adjust: exact;
-}
-.risk-pills {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 3px;
-  margin-top: 5px;
-}
-.risk-pill {
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 7px;
-  letter-spacing: 0.07em;
-  padding: 1px 6px;
-  border-radius: 2px;
-  border: 1px solid;
-  -webkit-print-color-adjust: exact;
-  print-color-adjust: exact;
-}
-.risk-score-legend {
-  display: flex;
-  justify-content: space-between;
-  padding: 7px 10px;
-  border-radius: 3px;
-  background: #f8f9ff;
-  border: 1px solid #e8eaf0;
-  margin-top: 10px;
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 7.5px;
-  letter-spacing: 0.1em;
-  color: #99a;
-}
-
 @media print {
-  body { background: #ffffff !important; }
+  body { background: #fff !important; }
   .page { max-width: 100%; }
 }
 `;
 
-// ─── Heatmap HTML builder (mirrors HeatMap.tsx logic) ────────────────────────
-
-const SEV_WEIGHT: Record<Severity, number> = { High: 10, Medium: 5, Low: 2 };
-
-function pdfRiskColor(score: number, max: number): string {
-  const t = max === 0 ? 0 : Math.min(score / max, 1);
-  if (t === 0) return "#f0f0f5";
-  if (t < 0.3) return `rgba(0,170,204,${0.3 + t * 0.5})`;
-  if (t < 0.6) return `rgba(255,180,0,${0.35 + t * 0.4})`;
-  return `rgba(255,0,64,${0.4 + t * 0.45})`;
-}
-
-function pdfRiskLabel(
-  score: number,
-  max: number,
-): { label: string; color: string } {
-  const t = max === 0 ? 0 : score / max;
-  if (t === 0) return { label: "CLEAN", color: "#aaa" };
-  if (t < 0.3) return { label: "LOW RISK", color: "#0088cc" };
-  if (t < 0.6) return { label: "MODERATE", color: "#cc8800" };
-  return { label: "CRITICAL", color: "#FF0040" };
-}
-
-const CELL_STYLE: Record<
-  string,
-  { bg: string; border: string; dot: string; text: string }
-> = {
-  High: { bg: "#fff0f3", border: "#FF004055", dot: "#FF0040", text: "#FF0040" },
-  Medium: {
-    bg: "#fffbf0",
-    border: "#FFB40055",
-    dot: "#FFB400",
-    text: "#cc8800",
-  },
-  Low: { bg: "#f0faff", border: "#00AACC55", dot: "#00AACC", text: "#0088cc" },
-  none: { bg: "#f8f9ff", border: "#e0e4f0", dot: "", text: "#ccc" },
-};
-
-function buildHeatmapHTML(issues: Issue[]): string {
-  const pages = Array.from(new Set(issues.map((i) => i.page)));
-  const issueTypes = Array.from(new Set(issues.map((i) => i.issue_type)));
-
-  // Matrix: page → issueType → worst severity
-  const matrix: Record<string, Record<string, Severity | null>> = {};
-  for (const page of pages) {
-    matrix[page] = {};
-    for (const type of issueTypes) {
-      const matches = issues.filter(
-        (i) => i.page === page && i.issue_type === type,
-      );
-      if (matches.length === 0) {
-        matrix[page][type] = null;
-        continue;
-      }
-      const hasHigh = matches.some((m) => m.severity === "High");
-      const hasMed = matches.some((m) => m.severity === "Medium");
-      matrix[page][type] = hasHigh ? "High" : hasMed ? "Medium" : "Low";
-    }
-  }
-
-  // Per-page risk score
-  const pageScores: Record<string, number> = {};
-  for (const page of pages)
-    pageScores[page] = issues
-      .filter((i) => i.page === page)
-      .reduce((a, i) => a + SEV_WEIGHT[i.severity], 0);
-  const maxScore = Math.max(...Object.values(pageScores), 1);
-
-  // Column headers
-  const colHeaders = issueTypes
-    .map(
-      (type) => `
-    <th>
-      <span class="matrix-col-line"></span>
-      ${type.toUpperCase()}
-    </th>`,
-    )
-    .join("");
-
-  // Matrix rows
-  const matrixRows = pages
-    .map((page) => {
-      const cells = issueTypes
-        .map((type) => {
-          const sev = matrix[page][type];
-          const s = CELL_STYLE[sev ?? "none"];
-          const inner = sev
-            ? `<div class="cell-inner">
-            <span class="cell-dot" style="background:${s.dot};"></span>
-            <span class="cell-label" style="color:${s.text};">${sev.toUpperCase()}</span>
-           </div>`
-            : `<div class="cell-inner"><span class="cell-empty">—</span></div>`;
-          return `<td class="matrix-cell" style="background:${s.bg};border:1px solid ${s.border};">${inner}</td>`;
-        })
-        .join("");
-      return `<tr>
-      <td class="matrix-row-label">${page}</td>
-      ${cells}
-    </tr>`;
-    })
-    .join("");
-
-  // Risk bars (sorted high → low)
-  const riskBars = pages
-    .slice()
-    .sort((a, b) => pageScores[b] - pageScores[a])
-    .map((page) => {
-      const score = pageScores[page];
-      const pct = (score / maxScore) * 100;
-      const { label, color } = pdfRiskLabel(score, maxScore);
-      const fillColor = pdfRiskColor(score, maxScore);
-
-      const pills = issues
-        .filter((i) => i.page === page)
-        .map((iss) => {
-          const pc =
-            iss.severity === "High"
-              ? "#FF0040"
-              : iss.severity === "Medium"
-                ? "#FFB400"
-                : "#00AACC";
-          return `<span class="risk-pill" style="background:${pc}18;border-color:${pc}55;color:${pc}cc;">${iss.issue_type}</span>`;
-        })
-        .join("");
-
-      return `
-        <div class="risk-row">
-          <div class="risk-row-header">
-            <span class="risk-page">${page}</span>
-            <div class="risk-right">
-              <span class="risk-label" style="color:${color};">${label}</span>
-              <span class="risk-score">${score}</span>
-            </div>
-          </div>
-          <div class="risk-track">
-            <div class="risk-fill" style="width:${pct}%;background:${fillColor};"></div>
-          </div>
-          <div class="risk-pills">${pills}</div>
-        </div>`;
-    })
-    .join("");
-
-  return `
-  <div class="heatmap-wrap">
-    <div class="heatmap-header">
-      <span class="heatmap-header-title">ANOMALY HEATMAP</span>
-      <span class="heatmap-header-meta">${pages.length} NODES · ${issueTypes.length} VECTORS</span>
-    </div>
-    <div class="heatmap-body">
-
-      <div class="heatmap-sub">— ISSUE DENSITY MATRIX —</div>
-      <table class="matrix-table">
-        <thead><tr><th></th>${colHeaders}</tr></thead>
-        <tbody>${matrixRows}</tbody>
-      </table>
-
-      <div class="matrix-legend">
-        <div class="legend-item">
-          <span class="legend-dot" style="background:#FF0040;"></span>
-          <span style="color:#FF0040;">HIGH</span>
-        </div>
-        <div class="legend-item">
-          <span class="legend-dot" style="background:#FFB400;"></span>
-          <span style="color:#cc8800;">MEDIUM</span>
-        </div>
-        <div class="legend-item">
-          <span class="legend-dot" style="background:#00AACC;"></span>
-          <span style="color:#0088cc;">LOW</span>
-        </div>
-        <div class="legend-item">
-          <span class="legend-dot" style="background:#e8eaf0;border:1px solid #ccc;"></span>
-          <span style="color:#aaa;">CLEAN</span>
-        </div>
-      </div>
-
-      <div class="heatmap-divider"></div>
-
-      <div class="risk-section-title">— PAGE RISK SCORE —</div>
-      ${riskBars}
-
-      <div class="risk-score-legend">
-        <span>SCORE: HIGH=10pts · MEDIUM=5pts · LOW=2pts</span>
-        <span>MAX: ${maxScore}pts</span>
-      </div>
-
-    </div>
-  </div>`;
-}
+// ─── PDF HTML builder ─────────────────────────────────────────────────────────
 
 function buildPDFHTML(
   results: ScanResults,
@@ -768,48 +373,98 @@ function buildPDFHTML(
     hour: "2-digit",
     minute: "2-digit",
   });
+
   const high = results.issues.filter((i) => i.severity === "High").length;
   const med = results.issues.filter((i) => i.severity === "Medium").length;
   const low = results.issues.filter((i) => i.severity === "Low").length;
   const total = results.issues_found;
   const pct = (n: number) => (total === 0 ? 0 : Math.round((n / total) * 100));
 
-  const issueRows = results.issues
-    .map(
-      (iss, idx) => `
-    <div class="issue sev-${iss.severity}">
-      <div class="issue-header">
-        <span class="issue-num">${String(idx + 1).padStart(2, "0")}</span>
-        <div class="issue-meta">
+  // Per-page risk table rows
+  const pages = Array.from(new Set(results.issues.map((i) => i.page)));
+  const pageScores = pages.map((page) => ({
+    page,
+    score: results.issues
+      .filter((i) => i.page === page)
+      .reduce(
+        (a, i) =>
+          a + (i.severity === "High" ? 10 : i.severity === "Medium" ? 5 : 2),
+        0,
+      ),
+    issues: results.issues.filter((i) => i.page === page),
+  }));
+  const maxScore = Math.max(...pageScores.map((p) => p.score), 1);
+
+  const pageRows = pageScores
+    .map(({ page, score, issues: pageIssues }) => {
+      const ratio = score / maxScore;
+      const riskLabel =
+        score === 0
+          ? "Clean"
+          : ratio < 0.4
+            ? "Low Risk"
+            : ratio < 0.7
+              ? "Moderate"
+              : "Critical";
+      const riskColor =
+        score === 0
+          ? "#aaa"
+          : ratio < 0.4
+            ? "#2b6cb0"
+            : ratio < 0.7
+              ? "#b7791f"
+              : "#c53030";
+      const pills = Array.from(new Set(pageIssues.map((i) => i.issue_type)))
+        .map((t) => {
+          const sev = pageIssues.find((i) => i.issue_type === t)!.severity;
+          const col = C[sev];
+          return `<span class="risk-pill" style="color:${col.fg};background:${col.bg};border-color:${col.border};">${t}</span>`;
+        })
+        .join("");
+      return `<tr>
+        <td>${page}</td>
+        <td><div class="risk-pills">${pills}</div></td>
+        <td style="text-align:right;"><span class="risk-badge" style="color:${riskColor};background:${riskColor}18;">${riskLabel}</span></td>
+      </tr>`;
+    })
+    .join("");
+
+  // Issue cards
+  const issueCards = results.issues
+    .map((iss, idx) => {
+      const col = C[iss.severity];
+      const shot = screenshotSnippet(iss.screenshot, b64map);
+      return `<div class="issue sev-${iss.severity}">
+        <div class="issue-header">
+          <span class="issue-num">${String(idx + 1).padStart(2, "0")}</span>
           <span class="issue-type">${iss.issue_type}</span>
-          <span class="sev-tag" style="color:${SEV_COLOR[iss.severity]};border-color:${SEV_COLOR[iss.severity]};background:${SEV_BG[iss.severity]}">${iss.severity.toUpperCase()}</span>
-          <span class="issue-page">${iss.page}</span>
+          <span class="sev-badge" style="color:${col.fg};background:${col.bg};border-color:${col.border};">${iss.severity}</span>
+          <span class="issue-page-url">${iss.page}</span>
         </div>
-      </div>
-      <p class="issue-desc">${iss.description}</p>
-      ${screenshotSnippet(iss.screenshot, b64map)}
-      <div class="ai-grid">
-        <div class="ai-block analysis-block">
-          <div class="ai-label">◈ NEURAL ANALYSIS</div>
-          <div class="ai-val">${iss.explanation}</div>
+        <p class="issue-desc">${iss.description}</p>
+        ${shot}
+        <div class="insight-grid">
+          <div class="insight-box">
+            <div class="insight-label">Analysis</div>
+            <div class="insight-val">${iss.explanation}</div>
+          </div>
+          <div class="insight-box">
+            <div class="insight-label">Impact</div>
+            <div class="insight-val">${iss.impact}</div>
+          </div>
+          <div class="insight-box insight-full">
+            <div class="insight-label">Fix</div>
+            <div class="insight-val insight-fix">${iss.fix_suggestion}</div>
+          </div>
         </div>
-        <div class="ai-block impact-block">
-          <div class="ai-label">◎ IMPACT VECTOR</div>
-          <div class="ai-val">${iss.impact}</div>
-        </div>
-        <div class="ai-block fix-block">
-          <div class="ai-label">⬡ REMEDIATION PROTOCOL</div>
-          <div class="ai-val fix-val">${iss.fix_suggestion}</div>
-        </div>
-      </div>
-    </div>`,
-    )
+      </div>`;
+    })
     .join("");
 
   return `<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8"/>
 <title>BugBot Report — ${results.url}</title>
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Share+Tech+Mono&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <style>${PDF_STYLES}</style>
 <script>window.addEventListener('load', () => { setTimeout(() => { window.print(); }, 700); });<\/script>
 </head><body><div class="page">
@@ -817,68 +472,80 @@ function buildPDFHTML(
   <div class="report-header">
     <div>
       <div class="logo">BugBot</div>
-      <div class="logo-tag">AUTONOMOUS QA NEXUS</div>
+      <div class="logo-tag">QA Report</div>
     </div>
     <div class="report-meta">
-      <div>GENERATED &nbsp;<strong>${dateStr} · ${timeStr}</strong></div>
-      <div>SCAN_ID &nbsp;<strong>${Date.now()}</strong></div>
-      <div>FORMAT &nbsp;<strong>PDF</strong></div>
+      <div>Generated &nbsp;<strong>${dateStr} · ${timeStr}</strong></div>
+      <div>Scan ID &nbsp;<strong>${Date.now()}</strong></div>
     </div>
   </div>
 
-  <div class="hero">
-    <div class="hero-eyebrow">SCAN COMPLETE — INTELLIGENCE EXTRACTED</div>
-    <div class="hero-url">${results.url}</div>
-    <div class="hero-sub">${results.pages_scanned} NODES SCANNED · ${results.issues_found} ANOMALIES DETECTED · AI-POWERED ANALYSIS</div>
+  <div class="target-block">
+    <span class="target-label">Target</span>
+    <span class="target-url">${results.url}</span>
   </div>
 
-  <div class="metrics">
-    <div class="metric">
-      <div class="metric-val" style="color:#0088cc">${results.pages_scanned}</div>
-      <div class="metric-label">NODES SCANNED</div>
+  <div class="summary">
+    <div class="summary-card">
+      <div class="summary-val" style="color:#2b6cb0;">${results.pages_scanned}</div>
+      <div class="summary-label">Pages Scanned</div>
     </div>
-    <div class="metric">
-      <div class="metric-val" style="color:#1a1a2e">${results.issues_found}</div>
-      <div class="metric-label">ANOMALIES FOUND</div>
+    <div class="summary-card">
+      <div class="summary-val" style="color:#111;">${results.issues_found}</div>
+      <div class="summary-label">Issues Found</div>
     </div>
-    <div class="metric">
-      <div class="metric-val" style="color:#FF0040">${high}</div>
-      <div class="metric-label">CRITICAL</div>
+    <div class="summary-card">
+      <div class="summary-val" style="color:#c53030;">${high}</div>
+      <div class="summary-label">High Severity</div>
     </div>
-    <div class="metric">
-      <div class="metric-val" style="color:#cc8800">${high + med}</div>
-      <div class="metric-label">NEEDS FIX</div>
-    </div>
-  </div>
-
-  <div class="sev-bar-wrap">
-    <div class="sev-bar-labels">
-      <span style="color:#FF0040">● HIGH: ${high} (${pct(high)}%)</span>
-      <span style="color:#cc8800">● MEDIUM: ${med} (${pct(med)}%)</span>
-      <span style="color:#0088cc">● LOW: ${low} (${pct(low)}%)</span>
-    </div>
-    <div class="sev-bar">
-      <div class="sev-seg" style="width:${pct(high)}%;background:#FF0040;"></div>
-      <div class="sev-seg" style="width:${pct(med)}%;background:#FFB400;"></div>
-      <div class="sev-seg" style="width:${pct(low)}%;background:#00AACC;"></div>
+    <div class="summary-card">
+      <div class="summary-val" style="color:#b7791f;">${high + med}</div>
+      <div class="summary-label">Needs Attention</div>
     </div>
   </div>
 
-  <div class="section-title">ANOMALY HEATMAP — DENSITY MATRIX &amp; RISK SCORES</div>
-  ${buildHeatmapHTML(results.issues)}
+  <div class="sev-row">
+    <div class="sev-pills">
+      <span class="sev-pill" style="background:#fff5f5;color:#c53030;">
+        <span class="sev-dot" style="background:#c53030;"></span>High: ${high}
+      </span>
+      <span class="sev-pill" style="background:#fffff0;color:#b7791f;">
+        <span class="sev-dot" style="background:#d69e2e;"></span>Medium: ${med}
+      </span>
+      <span class="sev-pill" style="background:#ebf8ff;color:#2b6cb0;">
+        <span class="sev-dot" style="background:#3182ce;"></span>Low: ${low}
+      </span>
+    </div>
+    <div class="sev-bar-track">
+      <div class="sev-seg" style="width:${pct(high)}%;background:#e53e3e;"></div>
+      <div class="sev-seg" style="width:${pct(med)}%;background:#d69e2e;"></div>
+      <div class="sev-seg" style="width:${pct(low)}%;background:#3182ce;"></div>
+    </div>
+  </div>
 
-  <div class="section-title">DETECTED ANOMALIES — FULL INTELLIGENCE REPORT</div>
-  ${issueRows}
+  <div class="section-heading">Page Risk Summary</div>
+  <table class="risk-table">
+    <thead><tr>
+      <th style="width:38%">Page</th>
+      <th>Issues</th>
+      <th style="text-align:right;">Risk</th>
+    </tr></thead>
+    <tbody>${pageRows}</tbody>
+  </table>
+
+  <div class="section-heading">Issues — Full Report</div>
+  ${issueCards}
 
   <div class="report-footer">
-    <span>BugBot · Autonomous QA Nexus · v2.4.1</span>
+    <span>BugBot · QA Nexus · v2.4.1</span>
     <span>${dateStr}</span>
   </div>
 
 </div></body></html>`;
 }
 
-// ─── HTML REPORT (dark themed, for browser) ───────────────────────────────────
+// ─── HTML REPORT STYLES (dark themed, for browser) ───────────────────────────
+
 const HTML_STYLES = `
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 body{background:#050505;color:#eef2ff;font-family:'Exo 2',sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
@@ -916,14 +583,16 @@ body::before{content:'';position:fixed;inset:0;background-image:radial-gradient(
 .ai-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding-left:26px;}
 .fix-block{grid-column:1/-1;}
 .ai-block{background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.05);border-radius:4px;padding:10px 12px;}
-.ai-label{font-family:'Share Tech Mono',monospace;font-size:7px;letter-spacing:0.16em;color:#334;}
-.ai-val{font-size:12px;color:#556;line-height:1.65;margin-top:5px;}
+.ai-label{font-family:'Share Tech Mono',monospace;font-size:7px;letter-spacing:0.16em;color:#334;margin-bottom:5px;}
+.ai-val{font-size:12px;color:#556;line-height:1.65;}
 .fix-val{color:rgba(0,245,255,0.75)!important;}
 .screenshot-block{margin-bottom:14px;border-radius:4px;overflow:hidden;border:1px solid rgba(0,245,255,0.1);}
 .screenshot-label{font-family:'Share Tech Mono',monospace;font-size:7px;letter-spacing:0.18em;color:rgba(0,245,255,0.4);padding:5px 10px;background:rgba(0,245,255,0.03);border-bottom:1px solid rgba(0,245,255,0.08);}
 .screenshot-block img{width:100%;max-height:220px;object-fit:cover;object-position:top;display:block;}
 .report-footer{margin-top:60px;padding-top:20px;border-top:1px solid #111;display:flex;justify-content:space-between;font-family:'Share Tech Mono',monospace;font-size:9px;color:#222;}
 `;
+
+// ─── HTML report builder ──────────────────────────────────────────────────────
 
 function buildHTMLReport(
   results: ScanResults,
@@ -945,6 +614,29 @@ function buildHTMLReport(
   const total = results.issues_found;
   const pct = (n: number) => (total === 0 ? 0 : Math.round((n / total) * 100));
 
+  const issueRows = results.issues
+    .map(
+      (iss, idx) => `
+    <div class="issue">
+      <div class="issue-header">
+        <span class="issue-num">${String(idx + 1).padStart(2, "0")}</span>
+        <div class="issue-meta">
+          <span class="issue-type">${iss.issue_type}</span>
+          <span class="sev-tag" style="color:${SEV_COLOR[iss.severity]};border-color:${SEV_COLOR[iss.severity]}44;background:${SEV_COLOR[iss.severity]}11">${iss.severity.toUpperCase()}</span>
+          <span class="issue-page">${iss.page}</span>
+        </div>
+      </div>
+      <p class="issue-desc">${iss.description}</p>
+      ${screenshotSnippet(iss.screenshot, b64map)}
+      <div class="ai-grid">
+        <div class="ai-block"><div class="ai-label">ANALYSIS</div><div class="ai-val">${iss.explanation}</div></div>
+        <div class="ai-block"><div class="ai-label">IMPACT</div><div class="ai-val">${iss.impact}</div></div>
+        <div class="ai-block fix-block"><div class="ai-label">FIX</div><div class="ai-val fix-val">${iss.fix_suggestion}</div></div>
+      </div>
+    </div>`,
+    )
+    .join("");
+
   return `<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8"/>
 <title>BugBot Report — ${results.url}</title>
@@ -960,7 +652,6 @@ function buildHTMLReport(
       <div>GENERATED</div>
       <div class="val">${dateStr} · ${timeStr}</div>
       <div style="margin-top:4px;color:#1a1a1a">SCAN_ID: ${Date.now()}</div>
-      <div style="margin-top:4px;color:#1a1a1a">FORMAT: HTML</div>
     </div>
   </div>
   <div class="hero">
@@ -987,7 +678,7 @@ function buildHTMLReport(
     </div>
   </div>
   <div class="section-title">DETECTED ANOMALIES — FULL INTELLIGENCE REPORT</div>
-  ${buildIssueRows(results.issues, b64map)}
+  ${issueRows}
   <div class="report-footer">
     <span>BugBot · Autonomous QA Nexus · v2.4.1</span>
     <span>${dateStr}</span>
@@ -995,36 +686,7 @@ function buildHTMLReport(
 </div></body></html>`;
 }
 
-// ── Shared issue row builder for dark HTML report ─────────────────────────────
-function buildIssueRows(
-  issues: Issue[],
-  b64map: Map<string, string> = new Map(),
-): string {
-  return issues
-    .map(
-      (iss, idx) => `
-    <div class="issue">
-      <div class="issue-header">
-        <span class="issue-num">${String(idx + 1).padStart(2, "0")}</span>
-        <div class="issue-meta">
-          <span class="issue-type">${iss.issue_type}</span>
-          <span class="sev-tag" style="color:${SEV_COLOR[iss.severity]};border-color:${SEV_COLOR[iss.severity]}44;background:${SEV_COLOR[iss.severity]}11">${iss.severity.toUpperCase()}</span>
-          <span class="issue-page">${iss.page}</span>
-        </div>
-      </div>
-      <p class="issue-desc">${iss.description}</p>
-      ${screenshotSnippet(iss.screenshot, b64map)}
-      <div class="ai-grid">
-        <div class="ai-block"><div class="ai-label">◈ NEURAL ANALYSIS</div><div class="ai-val">${iss.explanation}</div></div>
-        <div class="ai-block"><div class="ai-label">◎ IMPACT VECTOR</div><div class="ai-val">${iss.impact}</div></div>
-        <div class="ai-block fix-block"><div class="ai-label">⬡ REMEDIATION PROTOCOL</div><div class="ai-val fix-val">${iss.fix_suggestion}</div></div>
-      </div>
-    </div>`,
-    )
-    .join("");
-}
-
-// ── Screenshot → base64 helper ───────────────────────────────────────────────
+// ─── Screenshot helpers ───────────────────────────────────────────────────────
 
 async function fetchBase64(url: string): Promise<string | null> {
   try {
@@ -1057,8 +719,6 @@ async function resolveScreenshots(
   return map;
 }
 
-// ── Screenshot HTML snippet helper ───────────────────────────────────────────
-
 function screenshotSnippet(
   url: string | null | undefined,
   b64map: Map<string, string>,
@@ -1066,14 +726,13 @@ function screenshotSnippet(
   if (!url) return "";
   const src = b64map.get(url);
   if (!src) return "";
-  return `
-    <div class="screenshot-block">
-      <div class="screenshot-label">◉ PAGE SCREENSHOT</div>
+  return `<div class="screenshot-block">
+      <div class="screenshot-label">PAGE SCREENSHOT</div>
       <img src="${src}" alt="page screenshot" />
     </div>`;
 }
 
-// ── Public exports ────────────────────────────────────────────────────────────
+// ─── Public exports ───────────────────────────────────────────────────────────
 
 export async function downloadHTMLReport(results: ScanResults): Promise<void> {
   const b64map = await resolveScreenshots(results.issues);

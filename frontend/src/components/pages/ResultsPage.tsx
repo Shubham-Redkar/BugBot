@@ -1,6 +1,7 @@
 import { type FC, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { downloadHTMLReport, downloadPDFReport } from "../../lib/reports";
-import type { DlState, Filter, Issue, ScanResults } from "../../types";
+import type { Filter, Issue, ScanResults } from "../../types";
 import AnimatedCounter from "../ui/AnimatedCounter";
 import HeatMap from "../ui/HeatMap";
 import IssueCard from "../ui/IssueCard";
@@ -115,7 +116,7 @@ const MetricCard: FC<MetricCardProps> = ({ label, val, color }) => {
   );
 };
 
-/* ── Export modal ── */
+/* ── Export dropdown ── */
 type ExportDlState =
   | "idle"
   | "generating-html"
@@ -127,14 +128,26 @@ const ExportDropdown: FC<{ results: ScanResults }> = ({ results }) => {
   const [open, setOpen] = useState(false);
   const [dlState, setDlState] = useState<ExportDlState>("idle");
   const [hov, setHov] = useState(false);
+  const [rect, setRect] = useState<DOMRect | null>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
 
-  // Close on Escape key
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
+    const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
     };
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
+    const onDown = (e: MouseEvent) => {
+      const target = e.target as Node;
+      const panel = document.getElementById("export-dropdown-panel");
+      if (!btnRef.current?.contains(target) && !panel?.contains(target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("mousedown", onDown);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("mousedown", onDown);
+    };
   }, []);
 
   const busy = dlState === "generating-html" || dlState === "generating-pdf";
@@ -171,21 +184,91 @@ const ExportDropdown: FC<{ results: ScanResults }> = ({ results }) => {
     : open || hov
       ? "rgba(0,245,255,0.45)"
       : "rgba(0,245,255,0.15)";
-
-  const bgCol = done
-    ? "rgba(0,255,136,0.06)"
-    : open || hov
-      ? "rgba(0,245,255,0.08)"
-      : "rgba(0,245,255,0.03)";
-
+  const bgCol = done ? "#0a1a10" : open || hov ? "#0a1a20" : "#07090f";
   const textCol = done ? "#00FF88" : "#00F5FF";
+
+  const handleOpen = () => {
+    if (btnRef.current) setRect(btnRef.current.getBoundingClientRect());
+    setOpen((v) => !v);
+  };
+
+  const menu =
+    rect && open
+      ? createPortal(
+          <div
+            id="export-dropdown-panel"
+            style={{
+              position: "fixed",
+              top: rect.bottom + 6,
+              left: rect.right - 260,
+              width: "260px",
+              zIndex: 2147483647,
+              background: "#1e2130",
+              border: "1px solid rgba(0,245,255,0.2)",
+              borderRadius: "6px",
+              boxShadow: "0 16px 48px #000",
+              overflow: "hidden",
+            }}
+          >
+            <DropdownRow
+              icon={
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                >
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="10" y1="12" x2="14" y2="12" />
+                </svg>
+              }
+              label="HTML Page"
+              sub="Interactive · Themed"
+              accentRgb="0,245,255"
+              onClick={handleHTML}
+            />
+            <div
+              style={{
+                height: "1px",
+                background: "rgba(255,255,255,0.05)",
+                margin: "0 12px",
+              }}
+            />
+            <DropdownRow
+              icon={
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                >
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="9" y1="15" x2="15" y2="15" />
+                  <line x1="9" y1="18" x2="12" y2="18" />
+                </svg>
+              }
+              label="PDF Document"
+              sub="Print-ready · A4"
+              accentRgb="255,180,0"
+              onClick={handlePDF}
+            />
+          </div>,
+          document.body,
+        )
+      : null;
 
   return (
     <>
-      {/* Trigger button */}
       <button
+        ref={btnRef}
         onClick={() => {
-          if (!busy && !done) setOpen(true);
+          if (!busy && !done) handleOpen();
         }}
         onMouseEnter={() => setHov(true)}
         onMouseLeave={() => setHov(false)}
@@ -198,7 +281,7 @@ const ExportDropdown: FC<{ results: ScanResults }> = ({ results }) => {
           background: bgCol,
           color: textCol,
           boxShadow:
-            (open || hov) && !done ? "0 0 20px rgba(0,245,255,0.2)" : "none",
+            (open || hov) && !done ? "0 0 20px rgba(0,245,255,0.15)" : "none",
           cursor: busy ? "wait" : "pointer",
           transition: "all 0.2s ease",
         }}
@@ -214,7 +297,16 @@ const ExportDropdown: FC<{ results: ScanResults }> = ({ results }) => {
         )}
         {triggerLabel}
         {!busy && !done && (
-          <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+          <svg
+            width="8"
+            height="8"
+            viewBox="0 0 8 8"
+            fill="none"
+            style={{
+              transform: open ? "rotate(180deg)" : "rotate(0deg)",
+              transition: "transform 0.2s ease",
+            }}
+          >
             <path
               d="M1 2.5L4 5.5L7 2.5"
               stroke="#00F5FF"
@@ -224,231 +316,61 @@ const ExportDropdown: FC<{ results: ScanResults }> = ({ results }) => {
           </svg>
         )}
       </button>
-
-      {/* ── Modal overlay ── */}
-      {open && (
-        <div
-          onClick={() => setOpen(false)}
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            zIndex: 9999,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background: "rgba(0,0,0,0.88)",
-            backdropFilter: "blur(6px)",
-            WebkitBackdropFilter: "blur(6px)",
-          }}
-        >
-          {/* Dialog box */}
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              width: "400px",
-              maxWidth: "calc(100vw - 40px)",
-              background: "#07080d",
-              border: "1px solid rgba(0,245,255,0.28)",
-              borderRadius: "8px",
-              boxShadow:
-                "0 0 0 1px rgba(0,245,255,0.06), 0 0 80px rgba(0,245,255,0.14), 0 32px 100px rgba(0,0,0,1)",
-              overflow: "hidden",
-              position: "relative",
-            }}
-          >
-            {/* Modal header */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                padding: "14px 18px 12px",
-                borderBottom: "1px solid rgba(0,245,255,0.08)",
-              }}
-            >
-              <div>
-                <div
-                  className="font-mono-tech"
-                  style={{
-                    fontSize: "7px",
-                    letterSpacing: "0.25em",
-                    color: "rgba(0,245,255,0.4)",
-                    marginBottom: "4px",
-                  }}
-                >
-                  ↓ EXPORT INTELLIGENCE REPORT
-                </div>
-                <div
-                  className="font-orbitron font-black"
-                  style={{
-                    fontSize: "13px",
-                    color: "#fff",
-                    letterSpacing: "0.05em",
-                  }}
-                >
-                  SELECT FORMAT
-                </div>
-              </div>
-              {/* Close button */}
-              <button
-                onClick={() => setOpen(false)}
-                style={{
-                  background: "transparent",
-                  border: "1px solid rgba(0,245,255,0.15)",
-                  borderRadius: "3px",
-                  color: "rgba(0,245,255,0.5)",
-                  cursor: "pointer",
-                  width: "24px",
-                  height: "24px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "14px",
-                  lineHeight: 1,
-                  transition: "all 0.15s",
-                }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.borderColor =
-                    "rgba(0,245,255,0.4)";
-                  (e.currentTarget as HTMLButtonElement).style.color =
-                    "#00F5FF";
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.borderColor =
-                    "rgba(0,245,255,0.15)";
-                  (e.currentTarget as HTMLButtonElement).style.color =
-                    "rgba(0,245,255,0.5)";
-                }}
-              >
-                ×
-              </button>
-            </div>
-
-            {/* Format options */}
-            <div style={{ padding: "10px" }}>
-              <ExportOption
-                icon={
-                  <svg
-                    width="22"
-                    height="22"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                  >
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                    <polyline points="14 2 14 8 20 8" />
-                    <line x1="10" y1="12" x2="14" y2="12" />
-                  </svg>
-                }
-                label="HTML PAGE"
-                description="Interactive · Themed · Shareable"
-                tags={["INTERACTIVE", "THEMED"]}
-                accentRgb="0,245,255"
-                onClick={handleHTML}
-              />
-              <ExportOption
-                icon={
-                  <svg
-                    width="22"
-                    height="22"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                  >
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                    <polyline points="14 2 14 8 20 8" />
-                    <line x1="9" y1="15" x2="15" y2="15" />
-                    <line x1="9" y1="18" x2="12" y2="18" />
-                  </svg>
-                }
-                label="PDF DOCUMENT"
-                description="Print-ready · A4 · Portable"
-                tags={["PRINT-READY", "A4"]}
-                accentRgb="255,180,0"
-                onClick={handlePDF}
-              />
-            </div>
-
-            {/* Footer hint */}
-            <div
-              className="font-mono-tech"
-              style={{
-                fontSize: "7px",
-                letterSpacing: "0.15em",
-                color: "rgba(255,255,255,0.15)",
-                padding: "10px 18px 14px",
-                borderTop: "1px solid rgba(255,255,255,0.04)",
-                textAlign: "center",
-              }}
-            >
-              ESC OR CLICK OUTSIDE TO DISMISS
-            </div>
-          </div>
-        </div>
-      )}
+      {menu}
     </>
   );
 };
 
-/* ── Export option card inside modal ── */
-const ExportOption: FC<{
+const DropdownRow: FC<{
   icon: React.ReactNode;
   label: string;
-  description: string;
-  tags: string[];
+  sub: string;
   accentRgb: string;
   onClick: () => void;
-}> = ({ icon, label, description, tags, accentRgb, onClick }) => {
+}> = ({ icon, label, sub, accentRgb, onClick }) => {
   const [hov, setHov] = useState(false);
   return (
     <button
-      onClick={onClick}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
       style={{
         display: "flex",
         alignItems: "center",
-        gap: "14px",
+        gap: "12px",
         width: "100%",
-        padding: "14px 14px",
-        marginBottom: "6px",
-        background: hov ? `rgba(${accentRgb}, 0.1)` : "#0e0f16",
-        border: `1px solid ${hov ? `rgba(${accentRgb}, 0.35)` : "rgba(255,255,255,0.06)"}`,
-        borderRadius: "4px",
+        padding: "12px 14px",
+        background: hov ? `rgba(${accentRgb}, 0.08)` : "#1e2130",
+        border: "none",
         cursor: "pointer",
         textAlign: "left",
-        transition: "all 0.18s ease",
-        boxShadow: hov ? `0 0 20px rgba(${accentRgb}, 0.1)` : "none",
+        transition: "background 0.15s ease",
+        pointerEvents: "all",
+        position: "relative",
+        zIndex: 99999,
       }}
     >
-      {/* Icon */}
       <span
         style={{
-          color: hov ? `rgb(${accentRgb})` : "rgba(255,255,255,0.3)",
+          color: hov ? `rgb(${accentRgb})` : "rgba(255,255,255,0.4)",
           flexShrink: 0,
-          transition: "color 0.18s",
-          filter: hov ? `drop-shadow(0 0 6px rgba(${accentRgb}, 0.6))` : "none",
+          transition: "color 0.15s",
         }}
       >
         {icon}
       </span>
-
-      {/* Text */}
       <span style={{ flex: 1 }}>
         <div
           className="font-orbitron font-black"
           style={{
-            fontSize: "11px",
-            letterSpacing: "0.08em",
-            color: hov ? `rgb(${accentRgb})` : "#ccc",
-            textShadow: hov ? `0 0 12px rgba(${accentRgb}, 0.6)` : "none",
-            transition: "all 0.18s",
-            marginBottom: "4px",
+            fontSize: "10px",
+            letterSpacing: "0.06em",
+            color: hov ? `rgb(${accentRgb})` : "#ffffff",
+            transition: "color 0.15s",
+            marginBottom: "2px",
           }}
         >
           {label}
@@ -457,44 +379,19 @@ const ExportOption: FC<{
           className="font-mono-tech"
           style={{
             fontSize: "7px",
-            letterSpacing: "0.1em",
-            color: hov ? `rgba(${accentRgb}, 0.5)` : "rgba(255,255,255,0.2)",
-            transition: "color 0.18s",
-            marginBottom: "8px",
+            letterSpacing: "0.08em",
+            color: "rgba(255,255,255,0.3)",
+            transition: "color 0.15s",
           }}
         >
-          {description}
-        </div>
-        <div style={{ display: "flex", gap: "5px" }}>
-          {tags.map((t) => (
-            <span
-              key={t}
-              className="font-mono-tech"
-              style={{
-                fontSize: "6px",
-                letterSpacing: "0.12em",
-                padding: "2px 6px",
-                borderRadius: "2px",
-                border: `1px solid ${hov ? `rgba(${accentRgb}, 0.3)` : "rgba(255,255,255,0.08)"}`,
-                color: hov
-                  ? `rgba(${accentRgb}, 0.7)`
-                  : "rgba(255,255,255,0.2)",
-                transition: "all 0.18s",
-              }}
-            >
-              {t}
-            </span>
-          ))}
+          {sub}
         </div>
       </span>
-
-      {/* Arrow */}
       <span
         style={{
-          fontSize: "18px",
-          color: hov ? `rgba(${accentRgb}, 0.7)` : "rgba(255,255,255,0.1)",
-          transition: "color 0.18s, transform 0.18s",
-          transform: hov ? "translateX(3px)" : "translateX(0)",
+          fontSize: "14px",
+          color: hov ? `rgba(${accentRgb}, 0.6)` : "rgba(255,255,255,0.1)",
+          transition: "color 0.15s",
         }}
       >
         ›

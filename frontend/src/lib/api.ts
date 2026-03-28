@@ -46,7 +46,6 @@ export async function scanWebsite(
     issues_found: result.issues_found,
     health_score: result.health_score ?? 0,
     health_status: result.health_status ?? "Unknown",
-    summary: result.summary ?? { high: 0, medium: 0, low: 0 },
     issues: (result.issues ?? []).map((issue: Record<string, unknown>) => ({
       page: issue.page,
       issue_type: issue.issue_type,

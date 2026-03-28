@@ -10,7 +10,10 @@ interface ScanningPageProps {
 }
 
 const ScanningPage: FC<ScanningPageProps> = ({
-  activeStep, doneSteps, logLines, scannedUrl,
+  activeStep,
+  doneSteps,
+  logLines,
+  scannedUrl,
 }) => {
   const logRef = useRef<HTMLDivElement>(null);
 
@@ -21,27 +24,39 @@ const ScanningPage: FC<ScanningPageProps> = ({
   }, [logLines]);
 
   const totalLogs = AGENT_STEPS.reduce((acc, s) => acc + s.logLines.length, 0);
-  const progress = Math.round((logLines.length / totalLogs) * 100);
+  const progress = Math.min(
+    100,
+    Math.round((logLines.length / totalLogs) * 100),
+  );
 
   return (
-    <div className="mx-auto max-w-[720px] px-6 pt-[100px] pb-[80px]" style={{ position: "relative", zIndex: 2 }}>
-
+    <div
+      className="mx-auto max-w-[720px] px-6 pt-[100px] pb-[80px]"
+      style={{ position: "relative", zIndex: 2 }}
+    >
       {/* Header */}
       <div className="fade-up mb-8">
         <div
           className="font-mono-tech mb-2 flex items-center gap-2"
           style={{ fontSize: "9px", letterSpacing: "0.25em", color: "#00F5FF" }}
         >
-          <span className="inline-block h-[6px] w-[6px] rounded-full" style={{
-            background: "#00F5FF",
-            boxShadow: "0 0 8px #00F5FF",
-            animation: "heartbeat-btn 1s ease-in-out infinite",
-          }} />
+          <span
+            className="inline-block h-[6px] w-[6px] rounded-full"
+            style={{
+              background: "#00F5FF",
+              boxShadow: "0 0 8px #00F5FF",
+              animation: "heartbeat-btn 1s ease-in-out infinite",
+            }}
+          />
           SCAN IN PROGRESS — AUTONOMOUS AGENTS ACTIVE
         </div>
         <h2
           className="font-orbitron font-black break-all"
-          style={{ fontSize: "clamp(16px, 3vw, 22px)", color: "#FFFFFF", letterSpacing: "0.02em" }}
+          style={{
+            fontSize: "clamp(16px, 3vw, 22px)",
+            color: "#FFFFFF",
+            letterSpacing: "0.02em",
+          }}
         >
           {scannedUrl}
         </h2>
@@ -49,17 +64,28 @@ const ScanningPage: FC<ScanningPageProps> = ({
 
       {/* Progress bar */}
       <div
-        className="fade-up mb-8 overflow-hidden rounded-[2px]"
-        style={{ border: "1px solid rgba(0,245,255,0.1)", background: "rgba(0,0,0,0.4)" }}
+        className="fade-up mb-8 rounded-[2px]"
+        style={{
+          border: "1px solid rgba(0,245,255,0.18)",
+          background: "#0a0d12",
+        }}
       >
         <div
           className="font-mono-tech flex items-center justify-between px-4 py-2"
-          style={{ fontSize: "9px", color: "#333", letterSpacing: "0.15em", borderBottom: "1px solid rgba(0,245,255,0.06)" }}
+          style={{
+            fontSize: "9px",
+            color: "#333",
+            letterSpacing: "0.15em",
+            borderBottom: "1px solid rgba(0,245,255,0.06)",
+          }}
         >
           <span>MISSION PROGRESS</span>
           <span style={{ color: "rgba(0,245,255,0.6)" }}>{progress}%</span>
         </div>
-        <div className="h-[2px] w-full" style={{ background: "rgba(0,245,255,0.05)" }}>
+        <div
+          className="h-[2px] w-full"
+          style={{ background: "rgba(0,245,255,0.05)" }}
+        >
           <div
             className="h-full transition-[width] duration-500 ease-out"
             style={{
@@ -86,8 +112,8 @@ const ScanningPage: FC<ScanningPageProps> = ({
                 background: isActive
                   ? "rgba(0,245,255,0.04)"
                   : isDone
-                  ? "rgba(0,245,255,0.015)"
-                  : "rgba(255,255,255,0.008)",
+                    ? "rgba(0,245,255,0.015)"
+                    : "rgba(255,255,255,0.008)",
                 animation: `fadeUp 0.4s ${i * 0.1}s ease both`,
                 opacity: 0,
               }}
@@ -100,8 +126,16 @@ const ScanningPage: FC<ScanningPageProps> = ({
                 className="relative flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-[4px] font-mono-tech text-[20px]"
                 style={{
                   border: `1px solid ${isActive ? "rgba(0,245,255,0.3)" : isDone ? "rgba(0,245,255,0.1)" : "rgba(255,255,255,0.05)"}`,
-                  background: isActive ? "rgba(0,245,255,0.1)" : isDone ? "rgba(0,245,255,0.04)" : "rgba(255,255,255,0.02)",
-                  color: isActive ? "#00F5FF" : isDone ? "rgba(0,245,255,0.5)" : "#333",
+                  background: isActive
+                    ? "rgba(0,245,255,0.1)"
+                    : isDone
+                      ? "rgba(0,245,255,0.04)"
+                      : "rgba(255,255,255,0.02)",
+                  color: isActive
+                    ? "#00F5FF"
+                    : isDone
+                      ? "rgba(0,245,255,0.5)"
+                      : "#333",
                   boxShadow: isActive ? "0 0 20px rgba(0,245,255,0.2)" : "none",
                 }}
               >
@@ -134,10 +168,18 @@ const ScanningPage: FC<ScanningPageProps> = ({
                   style={{
                     fontSize: "9px",
                     letterSpacing: "0.12em",
-                    color: isActive ? "rgba(0,245,255,0.6)" : isDone ? "rgba(0,245,255,0.3)" : "#222",
+                    color: isActive
+                      ? "rgba(0,245,255,0.6)"
+                      : isDone
+                        ? "rgba(0,245,255,0.3)"
+                        : "#222",
                   }}
                 >
-                  {isDone ? "✓ COMPLETE — SIGNAL NOMINAL" : isActive ? step.sub : "STANDBY..."}
+                  {isDone
+                    ? "✓ COMPLETE — SIGNAL NOMINAL"
+                    : isActive
+                      ? step.sub
+                      : "STANDBY..."}
                 </div>
               </div>
 
@@ -148,7 +190,11 @@ const ScanningPage: FC<ScanningPageProps> = ({
                   fontSize: "8px",
                   letterSpacing: "0.15em",
                   border: `1px solid ${isActive ? "rgba(0,245,255,0.3)" : isDone ? "rgba(0,245,255,0.12)" : "rgba(255,255,255,0.04)"}`,
-                  color: isActive ? "#00F5FF" : isDone ? "rgba(0,245,255,0.5)" : "#222",
+                  color: isActive
+                    ? "#00F5FF"
+                    : isDone
+                      ? "rgba(0,245,255,0.5)"
+                      : "#222",
                   background: isActive ? "rgba(0,245,255,0.08)" : "transparent",
                   boxShadow: isActive ? "0 0 10px rgba(0,245,255,0.2)" : "none",
                 }}
@@ -174,7 +220,11 @@ const ScanningPage: FC<ScanningPageProps> = ({
           className="flex items-center gap-2 border-b px-4 py-[10px]"
           style={{ borderColor: "rgba(0,245,255,0.06)" }}
         >
-          {["rgba(255,0,64,0.6)", "rgba(255,180,0,0.6)", "rgba(0,245,255,0.4)"].map((c) => (
+          {[
+            "rgba(255,0,64,0.6)",
+            "rgba(255,180,0,0.6)",
+            "rgba(0,245,255,0.4)",
+          ].map((c) => (
             <span
               key={c}
               className="inline-block h-[9px] w-[9px] rounded-full"
@@ -189,12 +239,12 @@ const ScanningPage: FC<ScanningPageProps> = ({
           </span>
         </div>
 
-        <div
-          ref={logRef}
-          className="h-[180px] overflow-y-auto px-4 py-3"
-        >
+        <div ref={logRef} className="h-[180px] overflow-y-auto px-4 py-3">
           {logLines.length === 0 ? (
-            <div className="font-mono-tech" style={{ fontSize: "10px", color: "#222" }}>
+            <div
+              className="font-mono-tech"
+              style={{ fontSize: "10px", color: "#222" }}
+            >
               AWAITING AGENT OUTPUT<span className="cursor-blink">_</span>
             </div>
           ) : (
@@ -204,12 +254,22 @@ const ScanningPage: FC<ScanningPageProps> = ({
                 className="log-line font-mono-tech"
                 style={{ fontSize: "10px", lineHeight: 1.9 }}
               >
-                <span style={{ color: "rgba(0,245,255,0.2)", marginRight: "8px" }}>›</span>
-                <span style={{ color: idx === logLines.length - 1 ? "#00F5FF" : "#2a2a2a" }}>
+                <span
+                  style={{ color: "rgba(0,245,255,0.2)", marginRight: "8px" }}
+                >
+                  ›
+                </span>
+                <span
+                  style={{
+                    color: idx === logLines.length - 1 ? "#00F5FF" : "#2a2a2a",
+                  }}
+                >
                   {line.text}
                 </span>
                 {idx === logLines.length - 1 && (
-                  <span className="cursor-blink" style={{ color: "#00F5FF" }}>█</span>
+                  <span className="cursor-blink" style={{ color: "#00F5FF" }}>
+                    █
+                  </span>
                 )}
               </div>
             ))

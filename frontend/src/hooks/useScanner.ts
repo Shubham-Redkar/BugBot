@@ -63,7 +63,6 @@ export function useScanner(): UseScannerReturn {
           issues_found: 0,
           health_score: 0,
           health_status: "Error",
-          summary: { high: 0, medium: 0, low: 0 },
           issues: [],
         });
         setPhase("results");

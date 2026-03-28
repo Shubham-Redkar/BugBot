@@ -24,10 +24,7 @@ const CursorReticle: FC = () => {
 
       // Add trail dot
       const id = trailIdRef.current++;
-      setTrail((prev) => [
-        ...prev.slice(-10),
-        { id, x, y, opacity: 0.5 },
-      ]);
+      setTrail((prev) => [...prev.slice(-10), { id, x, y, opacity: 0.5 }]);
 
       // Check if hovering interactive element
       const el = document.elementFromPoint(x, y);
@@ -49,7 +46,7 @@ const CursorReticle: FC = () => {
       setTrail((prev) =>
         prev
           .map((t) => ({ ...t, opacity: t.opacity - 0.08 }))
-          .filter((t) => t.opacity > 0)
+          .filter((t) => t.opacity > 0),
       );
     }, 30);
 
@@ -90,7 +87,7 @@ const CursorReticle: FC = () => {
 
       {/* Main reticle */}
       <div
-        className="cursor-reticle"
+        className="cursor-reticle pointer-events-none"
         style={{
           left: pos.x,
           top: pos.y,
@@ -105,7 +102,8 @@ const CursorReticle: FC = () => {
           fill="none"
           style={{
             filter: `drop-shadow(0 0 ${clicking ? 10 : hovering ? 8 : 4}px rgba(0,245,255,${clicking ? 1 : hovering ? 0.9 : 0.7}))`,
-            transition: "filter 0.12s ease, width 0.12s ease, height 0.12s ease",
+            transition:
+              "filter 0.12s ease, width 0.12s ease, height 0.12s ease",
           }}
         >
           {/* Outer ring (partial arcs at corners) */}
@@ -131,7 +129,9 @@ const CursorReticle: FC = () => {
                 d={`M ${x1} ${y1} A ${r} ${r} 0 0 1 ${x2} ${y2}`}
                 stroke={`rgba(0, 245, 255, ${clicking ? 1 : hovering ? 0.9 : 0.55})`}
                 strokeWidth={clicking ? 1.5 : 1}
-                style={{ transition: "stroke-opacity 0.12s, stroke-width 0.12s" }}
+                style={{
+                  transition: "stroke-opacity 0.12s, stroke-width 0.12s",
+                }}
               />
             );
           })}
@@ -201,7 +201,12 @@ const CursorReticle: FC = () => {
           {/* Hover: diagonal tick marks at 45° corners */}
           {hovering && (
             <>
-              {[[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([sx, sy], i) => (
+              {[
+                [-1, -1],
+                [1, -1],
+                [1, 1],
+                [-1, 1],
+              ].map(([sx, sy], i) => (
                 <line
                   key={i}
                   x1={size + sx * (size - 7)}
