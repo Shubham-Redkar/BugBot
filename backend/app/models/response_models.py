@@ -1,7 +1,8 @@
-from typing import List, Literal, Optional
+from typing import List, Optional, Literal
 from pydantic import BaseModel, Field
 
 SeverityType = Literal["Low", "Medium", "High"]
+
 
 class IssueModel(BaseModel):
     page: str = Field(..., description="Page URL where issue was found")
@@ -12,6 +13,7 @@ class IssueModel(BaseModel):
     explanation: Optional[str] = Field(default="", description="AI explanation")
     impact: Optional[str] = Field(default="", description="Impact of the issue")
     fix_suggestion: Optional[str] = Field(default="", description="Suggested fix")
+
 
 class ScanResultModel(BaseModel):
     url: str
