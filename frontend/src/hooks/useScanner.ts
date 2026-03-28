@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
-import { AGENT_STEPS, MOCK_ISSUES } from "../lib/constants";
+import { AGENT_STEPS } from "../lib/constants";
+import { scanWebsite } from "../lib/api";
 import type { LogLine, Phase, ScanResults, UseScannerReturn } from "../types";
 
 export function useScanner(): UseScannerReturn {
@@ -25,6 +26,10 @@ export function useScanner(): UseScannerReturn {
       setDoneSteps([]);
       setLogLines([]);
 
+      // Kick off real API call immediately in background
+      const apiPromise = scanWebsite(url);
+
+      // Run animated steps as UI overlay while we wait
       for (let i = 0; i < AGENT_STEPS.length; i++) {
         setActiveStep(i);
         for (const line of AGENT_STEPS[i].logLines) {
@@ -35,14 +40,34 @@ export function useScanner(): UseScannerReturn {
         setDoneSteps((prev) => [...prev, i]);
       }
 
-      await delay(400);
-      setResults({
-        url,
-        pages_scanned: 4,
-        issues_found: MOCK_ISSUES.length,
-        issues: MOCK_ISSUES,
-      });
-      setPhase("results");
+      // Wait for the real scan result
+      try {
+        addLog("AWAITING INTELLIGENCE COMPILATION...");
+        const scanResults = await apiPromise;
+
+        addLog(
+          `SCAN COMPLETE — ${scanResults.issues_found} ANOMALIES DETECTED`,
+        );
+        await delay(400);
+
+        setResults(scanResults);
+        setPhase("results");
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Unknown error";
+        addLog(`ERROR: ${message}`);
+
+        // Show error state so the UI does not hang on the scanning screen
+        setResults({
+          url,
+          pages_scanned: 0,
+          issues_found: 0,
+          health_score: 0,
+          health_status: "Error",
+          summary: { high: 0, medium: 0, low: 0 },
+          issues: [],
+        });
+        setPhase("results");
+      }
     },
     [addLog],
   );
@@ -55,5 +80,14 @@ export function useScanner(): UseScannerReturn {
     setDoneSteps([]);
   }, []);
 
-  return { phase, activeStep, doneSteps, logLines, results, scannedUrl, startScan, reset };
+  return {
+    phase,
+    activeStep,
+    doneSteps,
+    logLines,
+    results,
+    scannedUrl,
+    startScan,
+    reset,
+  };
 }

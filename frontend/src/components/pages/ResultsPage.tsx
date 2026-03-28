@@ -1,4 +1,4 @@
-import { type FC, useEffect, useRef, useState } from "react";
+import { type FC, useEffect, useState } from "react";
 import { downloadHTMLReport, downloadPDFReport } from "../../lib/reports";
 import type { DlState, Filter, Issue, ScanResults } from "../../types";
 import AnimatedCounter from "../ui/AnimatedCounter";
@@ -38,7 +38,9 @@ const FilterTab: FC<FilterTabProps> = ({ label, rgb, isActive, onClick }) => {
         fontSize: "9px",
         letterSpacing: "0.12em",
         border: `1px solid ${lit ? `rgba(${rgb}, ${isActive ? 0.45 : 0.3})` : "rgba(255,255,255,0.04)"}`,
-        background: lit ? `rgba(${rgb}, ${isActive ? 0.1 : 0.05})` : "transparent",
+        background: lit
+          ? `rgba(${rgb}, ${isActive ? 0.1 : 0.05})`
+          : "transparent",
         color: lit ? `rgb(${rgb})` : "#333",
         boxShadow: lit
           ? `0 0 14px rgba(${rgb}, ${isActive ? 0.25 : 0.15}), 0 0 40px rgba(${rgb}, ${isActive ? 0.1 : 0.06})`
@@ -58,10 +60,13 @@ const MetricCard: FC<MetricCardProps> = ({ label, val, color }) => {
   const [hov, setHov] = useState(false);
   const isGlowColor = color === "#00F5FF";
   const glowRgb =
-    color === "#00F5FF" ? "0,245,255"
-    : color === "#FF0040" ? "255,0,64"
-    : color === "#FFB400" ? "255,180,0"
-    : "255,255,255";
+    color === "#00F5FF"
+      ? "0,245,255"
+      : color === "#FF0040"
+        ? "255,0,64"
+        : color === "#FFB400"
+          ? "255,180,0"
+          : "255,255,255";
 
   return (
     <div
@@ -75,7 +80,8 @@ const MetricCard: FC<MetricCardProps> = ({ label, val, color }) => {
           ? `0 0 24px rgba(${glowRgb}, 0.15), 0 0 60px rgba(${glowRgb}, 0.06), 0 8px 32px rgba(0,0,0,0.6)`
           : "none",
         transform: hov ? "translateY(-4px)" : "translateY(0px)",
-        transition: "transform 0.22s cubic-bezier(0.34,1.56,0.64,1), border-color 0.22s ease, background 0.22s ease, box-shadow 0.22s ease",
+        transition:
+          "transform 0.22s cubic-bezier(0.34,1.56,0.64,1), border-color 0.22s ease, background 0.22s ease, box-shadow 0.22s ease",
         cursor: "default",
       }}
     >
@@ -87,8 +93,8 @@ const MetricCard: FC<MetricCardProps> = ({ label, val, color }) => {
           textShadow: hov
             ? `0 0 20px rgba(${glowRgb}, 0.9), 0 0 50px rgba(${glowRgb}, 0.5), 0 0 90px rgba(${glowRgb}, 0.2)`
             : isGlowColor
-            ? "0 0 20px rgba(0,245,255,0.5)"
-            : "none",
+              ? "0 0 20px rgba(0,245,255,0.5)"
+              : "none",
           transition: "text-shadow 0.22s ease",
         }}
       >
@@ -110,16 +116,23 @@ const MetricCard: FC<MetricCardProps> = ({ label, val, color }) => {
 };
 
 /* ── Export modal ── */
-type ExportDlState = "idle" | "generating-html" | "generating-pdf" | "done-html" | "done-pdf";
+type ExportDlState =
+  | "idle"
+  | "generating-html"
+  | "generating-pdf"
+  | "done-html"
+  | "done-pdf";
 
 const ExportDropdown: FC<{ results: ScanResults }> = ({ results }) => {
-  const [open, setOpen]       = useState(false);
+  const [open, setOpen] = useState(false);
   const [dlState, setDlState] = useState<ExportDlState>("idle");
-  const [hov, setHov]         = useState(false);
+  const [hov, setHov] = useState(false);
 
   // Close on Escape key
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
   }, []);
@@ -130,8 +143,10 @@ const ExportDropdown: FC<{ results: ScanResults }> = ({ results }) => {
   const triggerLabel = busy
     ? "COMPILING..."
     : done
-    ? dlState === "done-html" ? "✓ HTML SAVED" : "✓ PDF READY"
-    : "↓ EXPORT REPORT";
+      ? dlState === "done-html"
+        ? "✓ HTML SAVED"
+        : "✓ PDF READY"
+      : "↓ EXPORT REPORT";
 
   const handleHTML = async () => {
     setOpen(false);
@@ -141,7 +156,7 @@ const ExportDropdown: FC<{ results: ScanResults }> = ({ results }) => {
     setDlState("done-html");
     setTimeout(() => setDlState("idle"), 2500);
   };
-  
+
   const handlePDF = async () => {
     setOpen(false);
     setDlState("generating-pdf");
@@ -154,23 +169,24 @@ const ExportDropdown: FC<{ results: ScanResults }> = ({ results }) => {
   const borderCol = done
     ? "rgba(0,255,136,0.35)"
     : open || hov
-    ? "rgba(0,245,255,0.45)"
-    : "rgba(0,245,255,0.15)";
+      ? "rgba(0,245,255,0.45)"
+      : "rgba(0,245,255,0.15)";
 
   const bgCol = done
     ? "rgba(0,255,136,0.06)"
     : open || hov
-    ? "rgba(0,245,255,0.08)"
-    : "rgba(0,245,255,0.03)";
+      ? "rgba(0,245,255,0.08)"
+      : "rgba(0,245,255,0.03)";
 
   const textCol = done ? "#00FF88" : "#00F5FF";
-  
 
   return (
     <>
       {/* Trigger button */}
       <button
-        onClick={() => { if (!busy && !done) setOpen(true); }}
+        onClick={() => {
+          if (!busy && !done) setOpen(true);
+        }}
         onMouseEnter={() => setHov(true)}
         onMouseLeave={() => setHov(false)}
         disabled={busy}
@@ -181,7 +197,8 @@ const ExportDropdown: FC<{ results: ScanResults }> = ({ results }) => {
           border: `1px solid ${borderCol}`,
           background: bgCol,
           color: textCol,
-          boxShadow: (open || hov) && !done ? "0 0 20px rgba(0,245,255,0.2)" : "none",
+          boxShadow:
+            (open || hov) && !done ? "0 0 20px rgba(0,245,255,0.2)" : "none",
           cursor: busy ? "wait" : "pointer",
           transition: "all 0.2s ease",
         }}
@@ -189,13 +206,21 @@ const ExportDropdown: FC<{ results: ScanResults }> = ({ results }) => {
         {busy && (
           <span
             className="spin-slow inline-block h-[8px] w-[8px] rounded-full border-[1.5px]"
-            style={{ borderColor: "rgba(0,245,255,0.2)", borderTopColor: "#00F5FF" }}
+            style={{
+              borderColor: "rgba(0,245,255,0.2)",
+              borderTopColor: "#00F5FF",
+            }}
           />
         )}
         {triggerLabel}
         {!busy && !done && (
           <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
-            <path d="M1 2.5L4 5.5L7 2.5" stroke="#00F5FF" strokeWidth="1.2" strokeLinecap="round"/>
+            <path
+              d="M1 2.5L4 5.5L7 2.5"
+              stroke="#00F5FF"
+              strokeWidth="1.2"
+              strokeLinecap="round"
+            />
           </svg>
         )}
       </button>
@@ -228,7 +253,8 @@ const ExportDropdown: FC<{ results: ScanResults }> = ({ results }) => {
               background: "#07080d",
               border: "1px solid rgba(0,245,255,0.28)",
               borderRadius: "8px",
-              boxShadow: "0 0 0 1px rgba(0,245,255,0.06), 0 0 80px rgba(0,245,255,0.14), 0 32px 100px rgba(0,0,0,1)",
+              boxShadow:
+                "0 0 0 1px rgba(0,245,255,0.06), 0 0 80px rgba(0,245,255,0.14), 0 32px 100px rgba(0,0,0,1)",
               overflow: "hidden",
               position: "relative",
             }}
@@ -246,13 +272,22 @@ const ExportDropdown: FC<{ results: ScanResults }> = ({ results }) => {
               <div>
                 <div
                   className="font-mono-tech"
-                  style={{ fontSize: "7px", letterSpacing: "0.25em", color: "rgba(0,245,255,0.4)", marginBottom: "4px" }}
+                  style={{
+                    fontSize: "7px",
+                    letterSpacing: "0.25em",
+                    color: "rgba(0,245,255,0.4)",
+                    marginBottom: "4px",
+                  }}
                 >
                   ↓ EXPORT INTELLIGENCE REPORT
                 </div>
                 <div
                   className="font-orbitron font-black"
-                  style={{ fontSize: "13px", color: "#fff", letterSpacing: "0.05em" }}
+                  style={{
+                    fontSize: "13px",
+                    color: "#fff",
+                    letterSpacing: "0.05em",
+                  }}
                 >
                   SELECT FORMAT
                 </div>
@@ -276,12 +311,16 @@ const ExportDropdown: FC<{ results: ScanResults }> = ({ results }) => {
                   transition: "all 0.15s",
                 }}
                 onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(0,245,255,0.4)";
-                  (e.currentTarget as HTMLButtonElement).style.color = "#00F5FF";
+                  (e.currentTarget as HTMLButtonElement).style.borderColor =
+                    "rgba(0,245,255,0.4)";
+                  (e.currentTarget as HTMLButtonElement).style.color =
+                    "#00F5FF";
                 }}
                 onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(0,245,255,0.15)";
-                  (e.currentTarget as HTMLButtonElement).style.color = "rgba(0,245,255,0.5)";
+                  (e.currentTarget as HTMLButtonElement).style.borderColor =
+                    "rgba(0,245,255,0.15)";
+                  (e.currentTarget as HTMLButtonElement).style.color =
+                    "rgba(0,245,255,0.5)";
                 }}
               >
                 ×
@@ -292,10 +331,17 @@ const ExportDropdown: FC<{ results: ScanResults }> = ({ results }) => {
             <div style={{ padding: "10px" }}>
               <ExportOption
                 icon={
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                    <polyline points="14 2 14 8 20 8"/>
-                    <line x1="10" y1="12" x2="14" y2="12"/>
+                  <svg
+                    width="22"
+                    height="22"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                  >
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="10" y1="12" x2="14" y2="12" />
                   </svg>
                 }
                 label="HTML PAGE"
@@ -306,11 +352,18 @@ const ExportDropdown: FC<{ results: ScanResults }> = ({ results }) => {
               />
               <ExportOption
                 icon={
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                    <polyline points="14 2 14 8 20 8"/>
-                    <line x1="9" y1="15" x2="15" y2="15"/>
-                    <line x1="9" y1="18" x2="12" y2="18"/>
+                  <svg
+                    width="22"
+                    height="22"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                  >
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="9" y1="15" x2="15" y2="15" />
+                    <line x1="9" y1="18" x2="12" y2="18" />
                   </svg>
                 }
                 label="PDF DOCUMENT"
@@ -374,12 +427,14 @@ const ExportOption: FC<{
       }}
     >
       {/* Icon */}
-      <span style={{
-        color: hov ? `rgb(${accentRgb})` : "rgba(255,255,255,0.3)",
-        flexShrink: 0,
-        transition: "color 0.18s",
-        filter: hov ? `drop-shadow(0 0 6px rgba(${accentRgb}, 0.6))` : "none",
-      }}>
+      <span
+        style={{
+          color: hov ? `rgb(${accentRgb})` : "rgba(255,255,255,0.3)",
+          flexShrink: 0,
+          transition: "color 0.18s",
+          filter: hov ? `drop-shadow(0 0 6px rgba(${accentRgb}, 0.6))` : "none",
+        }}
+      >
         {icon}
       </span>
 
@@ -421,7 +476,9 @@ const ExportOption: FC<{
                 padding: "2px 6px",
                 borderRadius: "2px",
                 border: `1px solid ${hov ? `rgba(${accentRgb}, 0.3)` : "rgba(255,255,255,0.08)"}`,
-                color: hov ? `rgba(${accentRgb}, 0.7)` : "rgba(255,255,255,0.2)",
+                color: hov
+                  ? `rgba(${accentRgb}, 0.7)`
+                  : "rgba(255,255,255,0.2)",
                 transition: "all 0.18s",
               }}
             >
@@ -432,87 +489,108 @@ const ExportOption: FC<{
       </span>
 
       {/* Arrow */}
-      <span style={{
-        fontSize: "18px",
-        color: hov ? `rgba(${accentRgb}, 0.7)` : "rgba(255,255,255,0.1)",
-        transition: "color 0.18s, transform 0.18s",
-        transform: hov ? "translateX(3px)" : "translateX(0)",
-      }}>›</span>
+      <span
+        style={{
+          fontSize: "18px",
+          color: hov ? `rgba(${accentRgb}, 0.7)` : "rgba(255,255,255,0.1)",
+          transition: "color 0.18s, transform 0.18s",
+          transform: hov ? "translateX(3px)" : "translateX(0)",
+        }}
+      >
+        ›
+      </span>
     </button>
   );
 };
 
-
 /* ── Main page ── */
 const ResultsPage: FC<ResultsPageProps> = ({ results, onReset }) => {
   const high = results.issues.filter((i) => i.severity === "High").length;
-  const med  = results.issues.filter((i) => i.severity === "Medium").length;
-  const low  = results.issues.filter((i) => i.severity === "Low").length;
+  const med = results.issues.filter((i) => i.severity === "Medium").length;
+  const low = results.issues.filter((i) => i.severity === "Low").length;
 
-  const [filter, setFilter]     = useState<Filter>("All");
+  const [filter, setFilter] = useState<Filter>("All");
   const [hovReset, setHovReset] = useState(false);
 
   const filtered: Issue[] =
-    filter === "All" ? results.issues : results.issues.filter((i) => i.severity === filter);
+    filter === "All"
+      ? results.issues
+      : results.issues.filter((i) => i.severity === filter);
 
   const metrics = [
-    { label: "NODES SCANNED",   val: results.pages_scanned, color: "#00F5FF" },
-    { label: "ANOMALIES FOUND", val: results.issues_found,  color: "#FFFFFF" },
-    { label: "CRITICAL",        val: high,                  color: "#FF0040" },
-    { label: "NEEDS FIX",       val: high + med,            color: "#FFB400" },
+    { label: "NODES SCANNED", val: results.pages_scanned, color: "#00F5FF" },
+    { label: "ANOMALIES FOUND", val: results.issues_found, color: "#FFFFFF" },
+    { label: "CRITICAL", val: high, color: "#FF0040" },
+    { label: "NEEDS FIX", val: high + med, color: "#FFB400" },
   ];
 
   const sevBars: [string, number, string][] = [
     ["#FF0040", high, "HIGH"],
-    ["#FFB400", med,  "MEDIUM"],
-    ["#00F5FF", low,  "LOW"],
+    ["#FFB400", med, "MEDIUM"],
+    ["#00F5FF", low, "LOW"],
   ];
 
   const filterMeta: Record<Filter, string> = {
-    All:    "0,245,255",
-    High:   "255,0,64",
+    All: "0,245,255",
+    High: "255,0,64",
     Medium: "255,180,0",
-    Low:    "0,245,255",
+    Low: "0,245,255",
   };
   const healthScore = results.health_score;
   const healthStatus = results.health_status;
 
   const getHealthColor = (status: string) => {
     switch (status) {
-      case "GOOD":
+      case "Excellent":
+      case "Good":
         return "#00FF88";
-      case "WARNING":
+      case "Fair":
         return "#FFB400";
-      case "CRITICAL":
+      case "Poor":
+      case "Error":
         return "#FF0040";
       default:
         return "#00F5FF";
     }
   };
 
-
   const healthColor = getHealthColor(healthStatus);
-  
-  return (
-    <div className="mx-auto max-w-[720px] px-6 pt-[100px] pb-[80px]" style={{ position: "relative", zIndex: 2 }}>
 
+  return (
+    <div
+      className="mx-auto max-w-[720px] px-6 pt-[100px] pb-[80px]"
+      style={{ position: "relative", zIndex: 2 }}
+    >
       {/* Header */}
       <div className="fade-up mb-8 flex items-start justify-between gap-4">
         <div className="min-w-0">
           <div
             className="font-mono-tech mb-2 flex items-center gap-2"
-            style={{ fontSize: "9px", letterSpacing: "0.25em", color: "rgba(0,255,136,0.8)" }}
+            style={{
+              fontSize: "9px",
+              letterSpacing: "0.25em",
+              color: "rgba(0,255,136,0.8)",
+            }}
           >
-            <span style={{
-              display: "inline-block", width: 6, height: 6,
-              borderRadius: "50%", background: "#00FF88",
-              boxShadow: "0 0 8px #00FF88",
-            }} />
+            <span
+              style={{
+                display: "inline-block",
+                width: 6,
+                height: 6,
+                borderRadius: "50%",
+                background: "#00FF88",
+                boxShadow: "0 0 8px #00FF88",
+              }}
+            />
             SCAN COMPLETE — INTELLIGENCE EXTRACTED
           </div>
           <h2
             className="font-orbitron font-black break-all"
-            style={{ fontSize: "clamp(14px, 2.5vw, 20px)", color: "#FFFFFF", letterSpacing: "0.02em" }}
+            style={{
+              fontSize: "clamp(14px, 2.5vw, 20px)",
+              color: "#FFFFFF",
+              letterSpacing: "0.02em",
+            }}
           >
             {results.url}
           </h2>
@@ -532,9 +610,13 @@ const ResultsPage: FC<ResultsPageProps> = ({ results, onReset }) => {
               fontSize: "9px",
               letterSpacing: "0.15em",
               border: `1px solid ${hovReset ? "rgba(0,245,255,0.4)" : "rgba(0,245,255,0.15)"}`,
-              background: hovReset ? "rgba(0,245,255,0.08)" : "rgba(0,245,255,0.03)",
+              background: hovReset
+                ? "rgba(0,245,255,0.08)"
+                : "rgba(0,245,255,0.03)",
               color: hovReset ? "#00F5FF" : "rgba(0,245,255,0.5)",
-              boxShadow: hovReset ? "0 0 20px rgba(0,245,255,0.2), 0 0 50px rgba(0,245,255,0.08)" : "none",
+              boxShadow: hovReset
+                ? "0 0 20px rgba(0,245,255,0.2), 0 0 50px rgba(0,245,255,0.08)"
+                : "none",
               textShadow: hovReset ? "0 0 10px rgba(0,245,255,0.6)" : "none",
               transition: "all 0.2s ease",
             }}
@@ -545,9 +627,17 @@ const ResultsPage: FC<ResultsPageProps> = ({ results, onReset }) => {
       </div>
 
       {/* Metrics */}
-      <div className="fade-up mb-4 grid grid-cols-2 gap-[8px] md:grid-cols-4" style={{ animationDelay: "0.1s" }}>
+      <div
+        className="fade-up mb-4 grid grid-cols-2 gap-[8px] md:grid-cols-4"
+        style={{ animationDelay: "0.1s" }}
+      >
         {metrics.map((m) => (
-          <MetricCard key={m.label} label={m.label} val={m.val} color={m.color} />
+          <MetricCard
+            key={m.label}
+            label={m.label}
+            val={m.val}
+            color={m.color}
+          />
         ))}
       </div>
 
@@ -562,12 +652,19 @@ const ResultsPage: FC<ResultsPageProps> = ({ results, onReset }) => {
       >
         <div className="mb-3 flex justify-between">
           {sevBars.map(([col, cnt, lbl]) => (
-            <span key={lbl} className="font-mono-tech" style={{ fontSize: "9px", color: col, letterSpacing: "0.1em" }}>
+            <span
+              key={lbl}
+              className="font-mono-tech"
+              style={{ fontSize: "9px", color: col, letterSpacing: "0.1em" }}
+            >
               ● {lbl}: {cnt}
             </span>
           ))}
         </div>
-        <div className="flex h-[3px] overflow-hidden rounded-full" style={{ background: "#0a0a0a" }}>
+        <div
+          className="flex h-[3px] overflow-hidden rounded-full"
+          style={{ background: "#0a0a0a" }}
+        >
           {sevBars.map(([col, cnt]) => (
             <div
               key={col}
@@ -638,11 +735,13 @@ const ResultsPage: FC<ResultsPageProps> = ({ results, onReset }) => {
               color: healthColor,
             }}
           >
-            {healthScore > 80
+            {healthStatus === "Excellent" || healthStatus === "Good"
               ? "SYSTEM STABLE"
-              : healthScore > 50
-              ? "ATTENTION REQUIRED"
-              : "CRITICAL RISK DETECTED"}
+              : healthStatus === "Fair"
+                ? "ATTENTION REQUIRED"
+                : healthStatus === "Error"
+                  ? "SCAN ERROR — CHECK BACKEND"
+                  : "CRITICAL RISK DETECTED"}
           </div>
         </div>
       </div>
@@ -653,7 +752,10 @@ const ResultsPage: FC<ResultsPageProps> = ({ results, onReset }) => {
       </div>
 
       {/* Filter tabs */}
-      <div className="fade-up mb-4 flex gap-2" style={{ animationDelay: "0.22s" }}>
+      <div
+        className="fade-up mb-4 flex gap-2"
+        style={{ animationDelay: "0.22s" }}
+      >
         {(["All", "High", "Medium", "Low"] as Filter[]).map((f) => (
           <FilterTab
             key={f}

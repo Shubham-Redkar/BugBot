@@ -18,8 +18,9 @@ export interface ScanResults {
   pages_scanned: number;
   issues_found: number;
   issues: Issue[];
-  health_score: number;      // 0–100
-  health_status: string;     // "GOOD" | "WARNING" | "CRITICAL"
+  health_score: number; // 0–100
+  health_status: string; // "Excellent" | "Good" | "Fair" | "Poor"
+  summary: { high: number; medium: number; low: number };
 }
 
 export interface LogLine {
