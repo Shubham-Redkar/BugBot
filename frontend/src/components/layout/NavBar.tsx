@@ -111,7 +111,7 @@ const NavBar: FC<NavBarProps> = ({ phase, onReset }) => {
               fontFamily: "'Share Tech Mono', monospace",
               fontSize: "9px",
               letterSpacing: "0.2em",
-              color: "#2a2a2a",
+              color: "#556677",
             }}
             onMouseEnter={(e) => {
               const el = e.currentTarget;
