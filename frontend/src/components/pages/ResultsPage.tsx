@@ -141,7 +141,7 @@ const ExportDropdown: FC<{ results: ScanResults }> = ({ results }) => {
     setDlState("done-html");
     setTimeout(() => setDlState("idle"), 2500);
   };
-
+  
   const handlePDF = async () => {
     setOpen(false);
     setDlState("generating-pdf");
@@ -164,6 +164,7 @@ const ExportDropdown: FC<{ results: ScanResults }> = ({ results }) => {
     : "rgba(0,245,255,0.03)";
 
   const textCol = done ? "#00FF88" : "#00F5FF";
+  
 
   return (
     <>
@@ -473,7 +474,25 @@ const ResultsPage: FC<ResultsPageProps> = ({ results, onReset }) => {
     Medium: "255,180,0",
     Low:    "0,245,255",
   };
+  const healthScore = results.health_score;
+  const healthStatus = results.health_status;
 
+  const getHealthColor = (status: string) => {
+    switch (status) {
+      case "GOOD":
+        return "#00FF88";
+      case "WARNING":
+        return "#FFB400";
+      case "CRITICAL":
+        return "#FF0040";
+      default:
+        return "#00F5FF";
+    }
+  };
+
+
+  const healthColor = getHealthColor(healthStatus);
+  
   return (
     <div className="mx-auto max-w-[720px] px-6 pt-[100px] pb-[80px]" style={{ position: "relative", zIndex: 2 }}>
 
@@ -560,6 +579,71 @@ const ResultsPage: FC<ResultsPageProps> = ({ results, onReset }) => {
               }}
             />
           ))}
+        </div>
+        {/* Health Score */}
+        <div
+          className="fade-up mb-6 rounded-[4px] px-4 py-4"
+          style={{
+            border: `1px solid ${healthColor}20`,
+            background: "rgba(255,255,255,0.01)",
+          }}
+        >
+          {/* Label */}
+          <div className="flex justify-between items-center mb-2">
+            <span
+              className="font-mono-tech"
+              style={{
+                fontSize: "9px",
+                letterSpacing: "0.15em",
+                color: "rgba(255,255,255,0.4)",
+              }}
+            >
+              WEBSITE HEALTH SCORE
+            </span>
+
+            <span
+              className="font-orbitron font-black"
+              style={{
+                fontSize: "14px",
+                color: healthColor,
+                textShadow: `0 0 12px ${healthColor}`,
+              }}
+            >
+              {healthScore}%
+            </span>
+          </div>
+
+          {/* Progress Bar */}
+          <div
+            className="h-[6px] w-full rounded-full overflow-hidden"
+            style={{ background: "#0a0a0a" }}
+          >
+            <div
+              style={{
+                width: `${healthScore}%`,
+                height: "100%",
+                background: healthColor,
+                boxShadow: `0 0 10px ${healthColor}, 0 0 20px ${healthColor}`,
+                transition: "width 0.6s ease",
+              }}
+            />
+          </div>
+
+          {/* Status Text */}
+          <div
+            className="font-mono-tech mt-2"
+            style={{
+              fontSize: "8px",
+              letterSpacing: "0.12em",
+              color: healthColor,
+            }}
+          >
+            {healthScore > 80
+              ? "SYSTEM STABLE"
+              : healthScore > 50
+              ? "ATTENTION REQUIRED"
+              : "CRITICAL RISK DETECTED"}
+          </div>
         </div>
       </div>
 
