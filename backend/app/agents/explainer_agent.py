@@ -15,6 +15,11 @@ Examples:
 - Broken Page → explain HTTP error / access issue
 - Form Validation Check → explain missing validation
 - Email Validation Check → explain invalid email acceptance
+- Missing Page Title → explain SEO/usability issue
+- Missing Meta Description → explain SEO/search snippet issue
+- Duplicate Page Title → explain SEO/usability duplication issue
+- Empty Buttons → explain accessibility/usability issue
+- Empty Links → explain accessibility/navigation issue
 
 Respond ONLY in this exact format:
 
@@ -88,6 +93,41 @@ def fallback_explanation(issue_type: str) -> tuple[str, str, str]:
             "The form appears to accept an invalid email format without proper validation.",
             "Invalid email data can cause failed communication, bad records, and poor user experience.",
             "Validate email format on both frontend and backend, and show a clear inline validation message."
+        )
+
+    if "missing page title" in issue_type:
+        return (
+            "The page does not have a proper title element.",
+            "Users and search engines may struggle to understand the page content.",
+            "Add a meaningful and unique <title> tag for each page."
+        )
+
+    if "missing meta description" in issue_type:
+        return (
+            "The page lacks a meta description tag.",
+            "Search engines may generate poor snippets, reducing click-through rates.",
+            "Add a concise and relevant meta description for each page."
+        )
+
+    if "duplicate page title" in issue_type:
+        return (
+            "Multiple pages share the same title, reducing clarity.",
+            "This can confuse users and negatively impact SEO rankings.",
+            "Ensure each page has a unique and descriptive title."
+        )
+
+    if "empty buttons" in issue_type:
+        return (
+            "Some buttons do not have visible text or accessible labels.",
+            "Users may not understand button purpose, especially when using assistive technologies.",
+            "Add visible labels or aria-label attributes so each button clearly communicates its action."
+        )
+
+    if "empty links" in issue_type:
+        return (
+            "Some links do not have visible text or accessible labels.",
+            "Users may struggle to navigate the page, and screen readers may not interpret these links properly.",
+            "Add meaningful link text or aria-label attributes so each link clearly describes its destination."
         )
 
     return (
