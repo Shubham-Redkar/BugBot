@@ -105,4 +105,14 @@ media/
 coverage/
 playwright-report/
 test-results/
+
 __pycache__
+
+frontend\eslint.config.js
+frontend\tsconfig.app.json
+frontend\tsconfig.json
+frontend\vite.config.ts
+frontend\tsconfig.node.json
+package-lock.json
+package.json
+node_modules

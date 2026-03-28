@@ -1,0 +1,277 @@
+@import "tailwindcss";
+@import url("https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600;700&display=swap");
+
+@theme {
+  --font-orbitron: "Orbitron", monospace;
+  --font-mono-tech: "Share Tech Mono", monospace;
+  --font-exo: "Exo 2", sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+:root {
+  --obsidian: #050505;
+  --cyan: #00F5FF;
+  --cyan-dim: rgba(0, 245, 255, 0.15);
+  --cyan-mid: rgba(0, 245, 255, 0.4);
+  --white: #FFFFFF;
+  --ghost: #444444;
+  --ghost-dim: #222222;
+  --grid-color: rgba(68, 68, 68, 0.18);
+  --bloom: 0 0 20px rgba(0, 245, 255, 0.6), 0 0 60px rgba(0, 245, 255, 0.3), 0 0 120px rgba(0, 245, 255, 0.1);
+  --bloom-sm: 0 0 10px rgba(0, 245, 255, 0.5), 0 0 30px rgba(0, 245, 255, 0.2);
+  --bloom-btn: 0 0 30px rgba(0, 245, 255, 0.7), 0 0 80px rgba(0, 245, 255, 0.35), 0 0 160px rgba(0, 245, 255, 0.15);
+}
+
+html, body {
+  background: var(--obsidian);
+  color: var(--white);
+  font-family: 'Exo 2', sans-serif;
+  overflow-x: hidden;
+  cursor: crosshair;
+}
+
+/* Point grid background */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: radial-gradient(circle, var(--ghost) 1px, transparent 1px);
+  background-size: 20px 20px;
+  opacity: 0.35;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Scan line overlay */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.03) 2px,
+    rgba(0, 0, 0, 0.03) 4px
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 2px; }
+::-webkit-scrollbar-track { background: #050505; }
+::-webkit-scrollbar-thumb { background: var(--cyan); border-radius: 999px; }
+
+/* ─── FONTS ─── */
+.font-orbitron { font-family: 'Orbitron', monospace; }
+.font-mono-tech { font-family: 'Share Tech Mono', monospace; }
+.font-exo { font-family: 'Exo 2', sans-serif; }
+
+/* ─── CYAN BLOOM TEXT ─── */
+.cyan-bloom {
+  color: var(--cyan);
+  text-shadow: var(--bloom);
+}
+.cyan-bloom-sm {
+  color: var(--cyan);
+  text-shadow: var(--bloom-sm);
+}
+
+/* ─── HEARTBEAT GLOW ─── */
+@keyframes heartbeat {
+  0%, 100% { opacity: 1; text-shadow: var(--bloom); }
+  50% { opacity: 0.88; text-shadow: 0 0 10px rgba(0,245,255,0.4), 0 0 30px rgba(0,245,255,0.15); }
+}
+.heartbeat { animation: heartbeat 2s ease-in-out infinite; }
+
+@keyframes heartbeat-btn {
+  0%, 100% { box-shadow: var(--bloom-btn); }
+  50% { box-shadow: 0 0 15px rgba(0,245,255,0.5), 0 0 40px rgba(0,245,255,0.2); }
+}
+.heartbeat-btn { animation: heartbeat-btn 2s ease-in-out infinite; }
+
+/* ─── NEURAL MESH BREATHING ─── */
+@keyframes meshBreathe {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.008); }
+}
+.mesh-breathe { animation: meshBreathe 4s ease-in-out infinite; }
+
+/* ─── GRID SPARK ─── */
+@keyframes spark {
+  0% { opacity: 0; transform: scale(0); }
+  50% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0); }
+}
+.spark { animation: spark 0.6s ease-in-out forwards; }
+
+/* ─── LOG STREAM ─── */
+@keyframes logSlide {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.log-line { animation: logSlide 0.15s ease both; }
+
+/* ─── GLITCH ─── */
+@keyframes glitch {
+  0% { clip-path: inset(0 0 100% 0); transform: translate(0); }
+  10% { clip-path: inset(20% 0 60% 0); transform: translate(-3px, 1px); color: #ff0040; }
+  20% { clip-path: inset(50% 0 30% 0); transform: translate(3px, -1px); color: #00F5FF; }
+  30% { clip-path: inset(80% 0 5% 0); transform: translate(-2px, 0); color: var(--white); }
+  40% { clip-path: inset(0 0 0 0); transform: translate(0); color: var(--white); }
+  100% { clip-path: inset(0 0 0 0); transform: translate(0); }
+}
+@keyframes glitchOverlay {
+  0% { opacity: 1; transform: translate(4px, 0); filter: hue-rotate(120deg); }
+  50% { opacity: 0.5; transform: translate(-4px, 2px); }
+  100% { opacity: 0; transform: translate(0); }
+}
+.glitching { animation: glitch 0.12s steps(1) forwards; }
+.glitch-overlay { animation: glitchOverlay 0.12s ease forwards; }
+
+/* ─── FADE UP ─── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.fade-up { animation: fadeUp 0.5s ease both; }
+
+/* ─── TYPEWRITER CURSOR ─── */
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+.cursor-blink { animation: blink 1s step-start infinite; }
+
+/* ─── ENTROPY COUNTER ─── */
+@keyframes flicker {
+  0%, 100% { opacity: 1; }
+  92% { opacity: 1; }
+  93% { opacity: 0.3; }
+  94% { opacity: 1; }
+  97% { opacity: 0.6; }
+  98% { opacity: 1; }
+}
+.flicker { animation: flicker 3s ease-in-out infinite; }
+
+/* ─── SPIN ─── */
+@keyframes spinSlow { to { transform: rotate(360deg); } }
+.spin-slow { animation: spinSlow 1s linear infinite; }
+
+/* ─── SCAN LINE SWEEP ─── */
+@keyframes scanSweep {
+  0% { top: -2px; opacity: 0.8; }
+  100% { top: 100%; opacity: 0; }
+}
+.scan-sweep {
+  position: absolute;
+  left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+  pointer-events: none;
+  animation: scanSweep 3s linear infinite;
+  z-index: 10;
+}
+
+/* ─── PULSE RING ─── */
+@keyframes pulseRing {
+  0% { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+.pulse-ring { animation: pulseRing 1.5s ease-out infinite; }
+
+/* ─── STEP CARD ─── */
+@keyframes stepIn {
+  from { opacity: 0; transform: translateX(-12px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* ─── INPUT GLOW FOCUS ─── */
+.cmd-input:focus-within {
+  border-color: var(--cyan) !important;
+  box-shadow: 0 0 0 1px var(--cyan), var(--bloom-btn);
+}
+
+/* ─── CRT VIGNETTE ─── */
+.crt-vignette {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9;
+  background:
+    radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.7) 100%);
+}
+
+/* ─── CUSTOM CURSOR RETICLE ─── */
+.cursor-reticle {
+  position: fixed;
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%, -50%);
+  transition: opacity 0.2s;
+}
+
+/* ─── DATA STREAM VERTICAL ─── */
+@keyframes dataStream {
+  0% { transform: translateY(-100%); opacity: 0; }
+  10% { opacity: 0.6; }
+  90% { opacity: 0.6; }
+  100% { transform: translateY(100vh); opacity: 0; }
+}
+
+/* ─── SLIDE IN FROM LEFT ─── */
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* ─── MATRIX CHAR FLICKER ─── */
+@keyframes matrixChar {
+  0%, 90%, 100% { opacity: 0; }
+  10%, 80% { opacity: 0.15; }
+}
+
+/* ─── HORIZONTAL GLITCH ─── */
+@keyframes hGlitch {
+  0%, 100% { clip-path: inset(0 0 98% 0); transform: translate(0); }
+  20% { clip-path: inset(30% 0 50% 0); transform: translate(-4px); }
+  40% { clip-path: inset(70% 0 10% 0); transform: translate(4px); }
+  60% { clip-path: inset(10% 0 80% 0); transform: translate(-2px); }
+  80% { clip-path: inset(50% 0 30% 0); transform: translate(2px); }
+}
+
+/* ─── PROGRESS BAR FILL ─── */
+@keyframes fillBar {
+  from { width: 0%; }
+}
+
+/* ─── BORDER TRACE ─── */
+@keyframes borderTrace {
+  0% { background-position: 0% 0%; }
+  100% { background-position: 200% 0%; }
+}
+
+/* ─── SHIMMER ─── */
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+.shimmer-text {
+  background: linear-gradient(90deg, #444 0%, #00F5FF 50%, #444 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 3s linear infinite;
+}
+
+/* ─── DRONE ICON ROTATE ─── */
+@keyframes droneSpin {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(5deg); }
+  75% { transform: rotate(-5deg); }
+}
+
+/* ─── UTILITY ─── */
+.transition-250 { transition-duration: 250ms; }
+.no-select { user-select: none; }
+
