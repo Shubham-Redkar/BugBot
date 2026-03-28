@@ -1,3 +1,4 @@
+import re
 import asyncio
 import concurrent.futures
 from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeoutError
@@ -46,24 +47,39 @@ def deduplicate_issues(issues: list[dict]) -> list[dict]:
 
     return unique_issues
 
+
+def extract_count(description: str) -> int:
+    """
+    Extract numeric count from issue description.
+    Example: '44 image(s) missing alt text.' -> 44
+    """
+    match = re.search(r"(\d+)", description or "")
+    return int(match.group(1)) if match else 1
+
+
 def calculate_health_score(issues: list[dict], pages_scanned: int) -> tuple[int, dict, str]:
     summary = {"high": 0, "medium": 0, "low": 0}
     total_penalty = 0
 
     for issue in issues:
         severity = issue.get("severity", "").lower()
+        description = issue.get("description", "")
+        count = extract_count(description)
+
+        # cap count effect so one crazy page doesn't destroy score
+        count_factor = min(count, 10)
 
         if severity == "high":
             summary["high"] += 1
-            total_penalty += 15
+            total_penalty += 12 + count_factor
         elif severity == "medium":
             summary["medium"] += 1
-            total_penalty += 5
+            total_penalty += 5 + (count_factor * 0.5)
         elif severity == "low":
             summary["low"] += 1
-            total_penalty += 2
+            total_penalty += 2 + (count_factor * 0.2)
 
-    # Normalize by pages
+    # normalize by pages scanned
     if pages_scanned > 0:
         normalized_penalty = total_penalty / pages_scanned
     else:
@@ -71,17 +87,17 @@ def calculate_health_score(issues: list[dict], pages_scanned: int) -> tuple[int,
 
     score = int(max(0, 100 - normalized_penalty))
 
-    # Better status mapping
-    if score >= 85:
+    if score >= 90:
         status = "Excellent"
-    elif score >= 70:
+    elif score >= 75:
         status = "Good"
-    elif score >= 50:
+    elif score >= 55:
         status = "Fair"
     else:
         status = "Poor"
 
     return score, summary, status
+
 
 async def _test(start_url: str) -> dict:
     issues = []
