@@ -49,10 +49,6 @@ def deduplicate_issues(issues: list[dict]) -> list[dict]:
 
 
 def extract_count(description: str) -> int:
-    """
-    Extract numeric count from issue description.
-    Example: '44 image(s) missing alt text.' -> 44
-    """
     match = re.search(r"(\d+)", description or "")
     return int(match.group(1)) if match else 1
 
@@ -66,7 +62,6 @@ def calculate_health_score(issues: list[dict], pages_scanned: int) -> tuple[int,
         description = issue.get("description", "")
         count = extract_count(description)
 
-        # cap count effect so one crazy page doesn't destroy score
         count_factor = min(count, 10)
 
         if severity == "high":
@@ -79,7 +74,6 @@ def calculate_health_score(issues: list[dict], pages_scanned: int) -> tuple[int,
             summary["low"] += 1
             total_penalty += 2 + (count_factor * 0.2)
 
-    # normalize by pages scanned
     if pages_scanned > 0:
         normalized_penalty = total_penalty / pages_scanned
     else:
@@ -123,9 +117,6 @@ async def _test(start_url: str) -> dict:
                 response = await page.goto(url, wait_until="load", timeout=15000)
                 await page.wait_for_timeout(1500)
 
-                # -------------------------
-                # 1) Broken page check
-                # -------------------------
                 if response and response.status >= 400:
                     screenshot = get_screenshot_path("broken_page", idx)
                     await page.screenshot(path=screenshot, full_page=True)
@@ -138,9 +129,6 @@ async def _test(start_url: str) -> dict:
                         screenshot=screenshot,
                     ).model_dump())
 
-                # -------------------------
-                # 2) Page title checks
-                # -------------------------
                 title = await page.title()
                 page_titles.append((url, title))
 
@@ -156,9 +144,6 @@ async def _test(start_url: str) -> dict:
                         screenshot=screenshot,
                     ).model_dump())
 
-                # -------------------------
-                # 3) Meta description check
-                # -------------------------
                 meta_locator = page.locator("meta[name='description']")
                 meta_count = await meta_locator.count()
 
@@ -178,9 +163,6 @@ async def _test(start_url: str) -> dict:
                         screenshot=screenshot,
                     ).model_dump())
 
-                # -------------------------
-                # 4) Missing alt text
-                # -------------------------
                 images_without_alt = await page.locator("img:not([alt]), img[alt='']").count()
 
                 if images_without_alt > 0:
@@ -195,9 +177,6 @@ async def _test(start_url: str) -> dict:
                         screenshot=screenshot,
                     ).model_dump())
 
-                # -------------------------
-                # 5) Broken images
-                # -------------------------
                 broken_images = await page.evaluate("""
                     () => {
                         return Array.from(document.images).filter(img =>
@@ -218,9 +197,6 @@ async def _test(start_url: str) -> dict:
                         screenshot=screenshot,
                     ).model_dump())
 
-                # -------------------------
-                # 6) Empty buttons
-                # -------------------------
                 empty_buttons = await page.locator("button").evaluate_all("""
                     buttons => buttons.filter(btn => !btn.innerText.trim() && !btn.getAttribute('aria-label')).length
                 """)
@@ -237,9 +213,6 @@ async def _test(start_url: str) -> dict:
                         screenshot=screenshot,
                     ).model_dump())
 
-                # -------------------------
-                # 7) Empty links
-                # -------------------------
                 empty_links = await page.locator("a").evaluate_all("""
                     links => links.filter(link => !link.innerText.trim() && !link.getAttribute('aria-label')).length
                 """)
@@ -256,9 +229,6 @@ async def _test(start_url: str) -> dict:
                         screenshot=screenshot,
                     ).model_dump())
 
-                # -------------------------
-                # 8) Console JS errors
-                # -------------------------
                 filtered_console_errors = [
                     err for err in console_errors
                     if not any(ignore in err.lower() for ignore in [
@@ -284,9 +254,6 @@ async def _test(start_url: str) -> dict:
                         screenshot=screenshot,
                     ).model_dump())
 
-                # -------------------------
-                # 9) Invalid email acceptance
-                # -------------------------
                 forms = page.locator("form")
                 form_count = await forms.count()
 
@@ -369,9 +336,6 @@ async def _test(start_url: str) -> dict:
 
         await browser.close()
 
-    # -------------------------
-    # 10) Duplicate title detection
-    # -------------------------
     title_map = {}
     for url, title in page_titles:
         normalized_title = (title or "").strip().lower()
@@ -390,9 +354,6 @@ async def _test(start_url: str) -> dict:
 
     issues = deduplicate_issues(issues)
 
-    # -------------------------
-    # 11) Health score + summary
-    # -------------------------
     health_score, summary, health_status = calculate_health_score(issues, len(pages_to_test))
 
     return ScanResultModel(
