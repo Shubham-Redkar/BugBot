@@ -2,6 +2,7 @@ import NavBar from "./components/layout/NavBar";
 import HomePage from "./components/pages/HomePage";
 import ResultsPage from "./components/pages/ResultsPage";
 import ScanningPage from "./components/pages/ScanningPage";
+import ResultsLoader from "./components/ui/ResultsLoader";
 import CursorReticle from "./components/ui/CursorReticle";
 import HUDScaffolding from "./components/ui/HUDScaffolding";
 import NeuralMesh from "./components/ui/NeuralMesh";
@@ -33,6 +34,14 @@ export default function App() {
           doneSteps={scanner.doneSteps}
           logLines={scanner.logLines}
           scannedUrl={scanner.scannedUrl}
+        />
+      )}
+
+      {/* ── Compilation loader between scanning and results ── */}
+      {scanner.phase === "compiling" && (
+        <ResultsLoader
+          onComplete={scanner.confirmResults}
+          dataReady={scanner.dataReady}
         />
       )}
 

@@ -1,0 +1,89 @@
+/*
+ * animations.css — additive cosmetic layer
+ * Add ONE line to main.tsx after the existing index.css import:
+ *   import './animations.css'
+ *
+ * This file only ADDS new rules. It never overrides existing ones.
+ */
+
+/* ── 1. SCROLL REVEAL ────────────────────────────────────────────────────────
+   useScrollReveal hook adds .sr-hidden to children on mount,
+   then swaps in .is-revealed when IntersectionObserver fires.
+   The animation IS the CSS transition — JS only toggles the class.
+*/
+.sr-hidden {
+  opacity: 0;
+  transform: translateY(38px);
+  transition:
+    opacity  0.75s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.75s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+
+.sr-hidden.is-revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ── 2. WAVE ANIMATIONS ──────────────────────────────────────────────────────
+   .wave-breathe  → container floats up/down (floating sensation)
+   .wave-group    → SVG <g> scaleY pulse (the "breathing" quality)
+   waveOrb        → ambient glow orb expands/contracts
+*/
+@keyframes waveBreathe {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-5px); }
+}
+
+@keyframes waveGroupBreath {
+  0%, 100% { transform: scaleY(1);     }
+  40%       { transform: scaleY(1.045); }
+  70%       { transform: scaleY(0.972); }
+}
+
+@keyframes waveOrb {
+  0%, 100% { opacity: 0.6; transform: translate(-50%,-50%) scale(1); }
+  50%       { opacity: 1;   transform: translate(-50%,-50%) scale(1.14); }
+}
+
+.wave-breathe {
+  animation: waveBreathe 6s ease-in-out infinite;
+}
+
+.wave-group {
+  animation: waveGroupBreath 5s ease-in-out infinite;
+}
+
+/* ── 3. CURSOR ───────────────────────────────────────────────────────────────
+   Hide the OS cursor — MagneticCursor (CursorReticle.tsx) replaces it.
+   cursor:none on html,body; restored for reduced-motion users below.
+*/
+html, body {
+  cursor: none !important;
+}
+
+button, a, input, textarea, select,
+[role="button"], [tabindex] {
+  cursor: none !important;
+}
+
+/* ── 4. REDUCED MOTION ───────────────────────────────────────────────────────
+   Respect the OS "reduce motion" accessibility preference.
+   Disables cosmetic animations but keeps all functionality intact.
+*/
+@media (prefers-reduced-motion: reduce) {
+  .sr-hidden {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+  .wave-breathe,
+  .wave-group {
+    animation: none !important;
+  }
+  html, body,
+  button, a, input, textarea, select,
+  [role="button"], [tabindex] {
+    cursor: auto !important;
+  }
+}

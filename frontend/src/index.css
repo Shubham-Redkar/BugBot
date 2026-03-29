@@ -21,6 +21,24 @@
   --bloom: 0 0 20px rgba(0, 245, 255, 0.6), 0 0 60px rgba(0, 245, 255, 0.3), 0 0 120px rgba(0, 245, 255, 0.1);
   --bloom-sm: 0 0 10px rgba(0, 245, 255, 0.5), 0 0 30px rgba(0, 245, 255, 0.2);
   --bloom-btn: 0 0 30px rgba(0, 245, 255, 0.7), 0 0 80px rgba(0, 245, 255, 0.35), 0 0 160px rgba(0, 245, 255, 0.15);
+
+  /* ── Spacing scale for minimalist layout breathing room ── */
+  --space-hero-v: 80px;         /* vertical padding for hero sections */
+  --space-section: 48px;        /* between major layout sections */
+  --space-card-pad: 28px 24px;  /* interior card padding */
+  --space-card-gap: 16px;       /* gap between card columns */
+  --space-card-gap-sm: 10px;    /* gap between stacked cards */
+
+  /* ── Card depth tokens ── */
+  --card-radius: 10px;
+  --card-radius-sm: 6px;
+  --card-surface: rgba(255,255,255,0.014);
+  --card-surface-hover: rgba(0,245,255,0.025);
+  --card-border: rgba(255,255,255,0.06);
+  --card-border-hover: rgba(0,245,255,0.16);
+  --card-shadow: drop-shadow(0 8px 20px rgba(0,0,0,0.5)) drop-shadow(0 2px 5px rgba(0,0,0,0.3));
+  --card-shadow-hover: drop-shadow(0 16px 36px rgba(0,0,0,0.65)) drop-shadow(0 3px 10px rgba(0,245,255,0.06));
+  --card-backplate-bg: rgba(0,245,255,0.012);
 }
 
 html, body {
@@ -271,7 +289,128 @@ body::after {
   75% { transform: rotate(-5deg); }
 }
 
+/* ─── WAVE FLOAT — subtle vertical drift for hero wave ── */
+@keyframes waveFloat {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-4px); }
+}
+.wave-float { animation: waveFloat 6s ease-in-out infinite; }
+
+/* ─── CARD DEPTH UTILITIES ─────────────────────────────── */
+
+/*
+ * .card-layered — base depth card (replaces flat border boxes)
+ * Provides rounded corners, subtle fill, and a soft drop shadow.
+ * Use in place of straight background/border combos.
+ */
+.card-layered {
+  border-radius: var(--card-radius);
+  background: var(--card-surface);
+  border: 1px solid var(--card-border);
+  filter: var(--card-shadow);
+  transition:
+    filter 0.22s ease,
+    transform 0.22s cubic-bezier(0.34, 1.4, 0.64, 1),
+    border-color 0.22s ease,
+    background 0.22s ease;
+}
+
+.card-layered:hover {
+  background: var(--card-surface-hover);
+  border-color: var(--card-border-hover);
+  filter: var(--card-shadow-hover);
+  transform: translateY(-3px);
+}
+
+/*
+ * .card-sm — smaller radius variant for compact cards (metric cards, etc.)
+ */
+.card-sm {
+  border-radius: var(--card-radius-sm);
+  background: var(--card-surface);
+  border: 1px solid var(--card-border);
+  filter: var(--card-shadow);
+  transition:
+    filter 0.22s ease,
+    transform 0.22s cubic-bezier(0.34, 1.4, 0.64, 1),
+    border-color 0.22s ease,
+    background 0.22s ease;
+}
+
+.card-sm:hover {
+  background: var(--card-surface-hover);
+  border-color: var(--card-border-hover);
+  filter: var(--card-shadow-hover);
+  transform: translateY(-2px);
+}
+
+/*
+ * .card-column-grid — responsive 3-column card layout with ample white space.
+ * Replaces old gap-3 md:grid-cols-3 pattern with breathing room.
+ */
+.card-column-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-card-gap);
+}
+
+@media (min-width: 768px) {
+  .card-column-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/*
+ * .card-stack — vertical list of cards with spacious gap between items.
+ * Use for issue lists and log entries.
+ */
+.card-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-card-gap-sm);
+}
+
+/* ─── SPACIOUS HERO LAYOUT UTILITIES ──────────────────── */
+
+/*
+ * .hero-section — centered, spacious hero container.
+ * Applies generous vertical breathing room around graphic and headline.
+ */
+.hero-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding-top: var(--space-hero-v);
+  padding-bottom: var(--space-hero-v);
+  padding-left: 24px;
+  padding-right: 24px;
+  position: relative;
+  z-index: 2;
+}
+
+/*
+ * .hero-graphic — wrapper for centralized abstract graphic.
+ * Provides consistent spacing above and below the visual element.
+ */
+.hero-graphic {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 16px 0 8px;
+}
+
+/*
+ * .hero-cta — centralized call-to-action block below graphic.
+ * Keeps input + button unit visually distinct with extra top margin.
+ */
+.hero-cta {
+  width: 100%;
+  max-width: 680px;
+  margin: 0 auto;
+}
+
 /* ─── UTILITY ─── */
 .transition-250 { transition-duration: 250ms; }
 .no-select { user-select: none; }
-

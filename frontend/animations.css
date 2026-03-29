@@ -1,0 +1,45 @@
+/*
+ * animations.css — additive only, never overrides index.css
+ * Usage: add  import './animations.css'  in main.tsx after index.css
+ */
+
+/* Particle orb float */
+@keyframes orbFloat {
+  0%,100% { transform: translateY(0px); }
+  50%      { transform: translateY(-10px); }
+}
+
+/* Rotating indicator dot on circular progress */
+@keyframes rotateDot {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Shimmer sweep on CTA button hover */
+@keyframes shimmerSweep {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+
+/* Expand panel open */
+@keyframes expandDown {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Metric card count-up flash */
+@keyframes metricFlash {
+  0%   { opacity: 0.4; }
+  100% { opacity: 1; }
+}
+
+/* Results page header slide in */
+@keyframes slideInDown {
+  from { opacity: 0; transform: translateY(-16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Health bar fill */
+@keyframes fillHealth {
+  from { width: 0%; }
+}
