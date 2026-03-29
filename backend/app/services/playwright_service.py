@@ -11,17 +11,7 @@ from services.screenshot_service import get_screenshot_path
 from models.response_models import ScanResultModel, IssueModel
 from utils.constants import MAX_PAGES, HEADLESS
 
-# Maximum total seconds the entire scan (all pages) may run before being aborted.
 SCAN_TIMEOUT_SECONDS = 120
-
-# NOTE: ScanResultModel in response_models.py must include these two new fields:
-#   scanned_at: str = ""              (ISO 8601 UTC timestamp)
-#   scan_duration_seconds: float = 0.0 (total wall-clock seconds for the scan)
-
-
-# =========================================================
-# CRAWL
-# =========================================================
 
 
 async def _crawl(start_url: str) -> list[str]:
@@ -47,11 +37,6 @@ async def _crawl(start_url: str) -> list[str]:
     return [start_url] + discovered[: MAX_PAGES - 1]
 
 
-# =========================================================
-# HELPERS
-# =========================================================
-
-
 def deduplicate_issues(issues: list[dict]) -> list[dict]:
     seen = set()
     unique = []
@@ -74,7 +59,6 @@ def calculate_health_score(issues: list[dict], pages_scanned: int):
     summary = {"high": 0, "medium": 0, "low": 0}
     total_penalty = 0
 
-    # Expanded priority sets to cover all check types
     high_priority = {
         "Required Field Validation",
         "Email Validation Check",
@@ -122,11 +106,6 @@ def calculate_health_score(issues: list[dict], pages_scanned: int):
     )
 
     return score, summary, status
-
-
-# =========================================================
-# FORM VALIDATION
-# =========================================================
 
 
 async def _check_required_field_validation(page, form, url, idx, issues):
@@ -273,11 +252,6 @@ async def _run_form_checks(page, url, idx, issues):
             print(f"[playwright] _run_form_checks error on form {i} at {url}: {e}")
 
 
-# =========================================================
-# POPUP HANDLING
-# =========================================================
-
-
 async def _trigger_popups(page):
     try:
         await page.wait_for_timeout(3000)
@@ -314,18 +288,12 @@ async def _scan_popup_forms(page, url, idx, issues):
                     )
 
 
-# =========================================================
-# PAGE-LEVEL CHECKS (NEW)
-# =========================================================
-
-
 async def _check_broken_images(page, url, idx, issues):
     """Flag images that failed to load (naturalWidth == 0)."""
     try:
         broken_srcs = await page.locator("img").evaluate_all(
             "els => els.filter(el => !el.naturalWidth).map(el => el.src)"
         )
-        # Filter out empty src / data URIs which are intentional
         broken_srcs = [s for s in broken_srcs if s and not s.startswith("data:")]
 
         if broken_srcs:
@@ -493,11 +461,6 @@ async def _run_page_checks(page, url, idx, issues, console_errors: list):
     await _check_empty_links(page, url, idx, issues)
 
 
-# =========================================================
-# SINGLE PAGE SCAN
-# =========================================================
-
-
 async def _scan_page(context, url: str, idx: int) -> list[dict]:
     """
     Scan a single page and return its issues as an independent list.
@@ -506,8 +469,6 @@ async def _scan_page(context, url: str, idx: int) -> list[dict]:
     page_issues: list[dict] = []
     page = await context.new_page()
 
-    # Attach console listener before navigation so errors from the
-    # very first frame load are captured.
     console_errors = []
     page.on(
         "console",
@@ -527,16 +488,12 @@ async def _scan_page(context, url: str, idx: int) -> list[dict]:
                     description=f"HTTP {res.status}",
                 ).model_dump()
             )
-            # Still run checks — page may have partial content worth inspecting
 
-        # Page-level checks
         await _run_page_checks(page, url, idx, page_issues, console_errors)
 
-        # Popup detection
         await _trigger_popups(page)
         await _scan_popup_forms(page, url, idx, page_issues)
 
-        # Form checks
         await _run_form_checks(page, url, idx, page_issues)
 
     except PlaywrightTimeoutError:
@@ -558,11 +515,6 @@ async def _scan_page(context, url: str, idx: int) -> list[dict]:
     return page_issues
 
 
-# =========================================================
-# MAIN TEST
-# =========================================================
-
-
 def _check_duplicate_titles(page_titles: dict[str, str]) -> list[dict]:
     """
     Post-processing pass over all collected page titles.
@@ -581,7 +533,7 @@ def _check_duplicate_titles(page_titles: dict[str, str]) -> list[dict]:
         if len(urls) > 1:
             dup_issues.append(
                 IssueModel(
-                    page=urls[0],  # anchor to the first occurrence
+                    page=urls[0],
                     issue_type="Duplicate Page Title",
                     severity="Medium",
                     description=(
@@ -602,7 +554,6 @@ async def _test(start_url: str):
 
     pages = await _crawl(start_url)
 
-    # Collect page titles during scan for duplicate detection
     page_titles: dict[str, str] = {}
 
     async with async_playwright() as p:
@@ -610,8 +561,6 @@ async def _test(start_url: str):
         context = await browser.new_context()
 
         try:
-            # Each page returns its own independent issue list — no shared state.
-            # asyncio.gather runs all pages concurrently for speed.
             results: list[list[dict]] = await asyncio.wait_for(
                 asyncio.gather(
                     *[_scan_page(context, url, idx) for idx, url in enumerate(pages)]
@@ -619,15 +568,12 @@ async def _test(start_url: str):
                 timeout=SCAN_TIMEOUT_SECONDS,
             )
 
-            # Collect titles for duplicate detection while merging issues
             for url, page_issues in zip(pages, results):
                 title_issues = [
                     i
                     for i in page_issues
                     if i.get("issue_type") == "Missing Page Title"
                 ]
-                # If no "Missing Page Title" issue, the page has a title — fetch it
-                # from the description absence; store empty string to skip dup check
                 page_titles[url] = "" if title_issues else url  # placeholder, see below
 
         except asyncio.TimeoutError:
@@ -640,11 +586,8 @@ async def _test(start_url: str):
         finally:
             await browser.close()
 
-    # Flatten per-page issue lists into one
     issues: list[dict] = [issue for page_issues in results for issue in page_issues]
 
-    # Duplicate title detection — needs a second lightweight browser pass
-    # only if there are 2+ pages worth checking (single-page sites skip this)
     if len(pages) > 1:
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=HEADLESS)
@@ -675,11 +618,6 @@ async def _test(start_url: str):
         scanned_at=scan_started_at,
         scan_duration_seconds=scan_duration,
     ).model_dump()
-
-
-# =========================================================
-# THREAD WRAPPER
-# =========================================================
 
 
 def _run_in_thread(coro_fn):
