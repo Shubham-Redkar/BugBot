@@ -1,21 +1,16 @@
 import type { Issue, ScanResults, Severity } from "../types";
 
-// ─── Severity colour maps ─────────────────────────────────────────────────────
-
 const SEV_COLOR: Record<Severity, string> = {
   High: "#FF0040",
   Medium: "#FFB400",
   Low: "#00AACC",
 };
 
-// Muted print-safe palette for PDF
 const C: Record<Severity, { fg: string; bg: string; border: string }> = {
   High: { fg: "#c53030", bg: "#fff5f5", border: "#fc8181" },
   Medium: { fg: "#b7791f", bg: "#fffff0", border: "#f6e05e" },
   Low: { fg: "#2b6cb0", bg: "#ebf8ff", border: "#90cdf4" },
 };
-
-// ─── PDF STYLES ───────────────────────────────────────────────────────────────
 
 const PDF_STYLES = `
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap');
@@ -357,8 +352,6 @@ body {
 }
 `;
 
-// ─── PDF HTML builder ─────────────────────────────────────────────────────────
-
 function buildPDFHTML(
   results: ScanResults,
   b64map: Map<string, string> = new Map(),
@@ -380,7 +373,6 @@ function buildPDFHTML(
   const total = results.issues_found;
   const pct = (n: number) => (total === 0 ? 0 : Math.round((n / total) * 100));
 
-  // Per-page risk table rows
   const pages = Array.from(new Set(results.issues.map((i) => i.page)));
   const pageScores = pages.map((page) => ({
     page,
@@ -429,7 +421,6 @@ function buildPDFHTML(
     })
     .join("");
 
-  // Issue cards
   const issueCards = results.issues
     .map((iss, idx) => {
       const col = C[iss.severity];
@@ -537,14 +528,12 @@ function buildPDFHTML(
   ${issueCards}
 
   <div class="report-footer">
-    <span>BugBot · QA Nexus · v2.4.1</span>
+    <span>BugBot · QA Nexus · v1.0.0</span>
     <span>${dateStr}</span>
   </div>
 
 </div></body></html>`;
 }
-
-// ─── HTML REPORT STYLES (dark themed, for browser) ───────────────────────────
 
 const HTML_STYLES = `
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -591,8 +580,6 @@ body::before{content:'';position:fixed;inset:0;background-image:radial-gradient(
 .screenshot-block img{width:100%;max-height:220px;object-fit:cover;object-position:top;display:block;}
 .report-footer{margin-top:60px;padding-top:20px;border-top:1px solid #111;display:flex;justify-content:space-between;font-family:'Share Tech Mono',monospace;font-size:9px;color:#222;}
 `;
-
-// ─── HTML report builder ──────────────────────────────────────────────────────
 
 function buildHTMLReport(
   results: ScanResults,
@@ -680,13 +667,11 @@ function buildHTMLReport(
   <div class="section-title">DETECTED ANOMALIES — FULL INTELLIGENCE REPORT</div>
   ${issueRows}
   <div class="report-footer">
-    <span>BugBot · Autonomous QA Nexus · v2.4.1</span>
+    <span>BugBot · Autonomous QA Nexus · v1.0.0</span>
     <span>${dateStr}</span>
   </div>
 </div></body></html>`;
 }
-
-// ─── Screenshot helpers ───────────────────────────────────────────────────────
 
 async function fetchBase64(url: string): Promise<string | null> {
   try {
@@ -732,8 +717,6 @@ function screenshotSnippet(
     </div>`;
 }
 
-// ─── Public exports ───────────────────────────────────────────────────────────
-
 export async function downloadHTMLReport(results: ScanResults): Promise<void> {
   const b64map = await resolveScreenshots(results.issues);
   const html = buildHTMLReport(results, b64map);
@@ -768,7 +751,6 @@ export async function downloadPDFReport(results: ScanResults): Promise<void> {
   }, 8000);
 }
 
-// Legacy alias
 export async function downloadReport(results: ScanResults): Promise<void> {
   return downloadHTMLReport(results);
 }

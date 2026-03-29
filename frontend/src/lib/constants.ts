@@ -47,37 +47,53 @@ export const MOCK_ISSUES: Issue[] = [
     page: "/contact",
     issue_type: "Broken Link",
     severity: "High",
-    description: "CTA button redirects to a 404 dead zone — navigation terminated for all users.",
-    explanation: "A broken link prevents users from completing their intended action, creating a hard dead-end in the user journey.",
-    impact: "Users cannot access critical content. Bounce rate spike imminent. Trust erosion confirmed.",
-    fix_suggestion: "Update the href attribute to point to a valid, existing route in your routing layer.",
+    description:
+      "CTA button redirects to a 404 dead zone — navigation terminated for all users.",
+    explanation:
+      "A broken link prevents users from completing their intended action, creating a hard dead-end in the user journey.",
+    impact:
+      "Users cannot access critical content. Bounce rate spike imminent. Trust erosion confirmed.",
+    fix_suggestion:
+      "Update the href attribute to point to a valid, existing route in your routing layer.",
   },
   {
     page: "/signup",
     issue_type: "Form Validation",
     severity: "Medium",
-    description: "Email field accepts 'abc@@@@' — validation layer is completely absent.",
-    explanation: "Client-side validation is not implemented. Malformed data propagates directly to backend systems.",
-    impact: "Invalid payloads corrupt backend data pipelines and degrade user trust metrics.",
-    fix_suggestion: "Implement RFC 5322 regex validator or enforce HTML5 type='email' with pattern attribute.",
+    description:
+      "Email field accepts 'abc@@@@' — validation layer is completely absent.",
+    explanation:
+      "Client-side validation is not implemented. Malformed data propagates directly to backend systems.",
+    impact:
+      "Invalid payloads corrupt backend data pipelines and degrade user trust metrics.",
+    fix_suggestion:
+      "Implement RFC 5322 regex validator or enforce HTML5 type='email' with pattern attribute.",
   },
   {
     page: "/home",
     issue_type: "Dead Button",
     severity: "Low",
-    description: "Subscribe button fires onClick with zero logic attached — silent null operation.",
-    explanation: "Event handler is registered but no action is bound. The UI appears functional while being inert.",
-    impact: "Silent failures erode user trust. Users assume the product is broken.",
-    fix_suggestion: "Wire onClick to the subscription handler or render the button as disabled until handler is ready.",
+    description:
+      "Subscribe button fires onClick with zero logic attached — silent null operation.",
+    explanation:
+      "Event handler is registered but no action is bound. The UI appears functional while being inert.",
+    impact:
+      "Silent failures erode user trust. Users assume the product is broken.",
+    fix_suggestion:
+      "Wire onClick to the subscription handler or render the button as disabled until handler is ready.",
   },
   {
     page: "/pricing",
     issue_type: "HTTP 503",
     severity: "High",
-    description: "Server returns 503 — pricing node is completely offline. Revenue impact: critical.",
-    explanation: "A 503 means the server could not process the request. The pricing route is down at infrastructure level.",
-    impact: "Pricing downtime is a direct conversion killer. Every minute costs revenue.",
-    fix_suggestion: "Audit server logs immediately. Add a fallback static cache and implement a retry-after header.",
+    description:
+      "Server returns 503 — pricing node is completely offline. Revenue impact: critical.",
+    explanation:
+      "A 503 means the server could not process the request. The pricing route is down at infrastructure level.",
+    impact:
+      "Pricing downtime is a direct conversion killer. Every minute costs revenue.",
+    fix_suggestion:
+      "Audit server logs immediately. Add a fallback static cache and implement a retry-after header.",
   },
 ];
 

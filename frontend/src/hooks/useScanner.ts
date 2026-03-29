@@ -11,6 +11,8 @@ export function useScanner(): UseScannerReturn {
   const [results, setResults] = useState<ScanResults | null>(null);
   const [scannedUrl, setScannedUrl] = useState<string>("");
 
+  const [dataReady, setDataReady] = useState(false);
+
   const addLog = useCallback((text: string): void => {
     setLogLines((prev) => [...prev, { id: Date.now() + Math.random(), text }]);
   }, []);
@@ -25,11 +27,10 @@ export function useScanner(): UseScannerReturn {
       setActiveStep(-1);
       setDoneSteps([]);
       setLogLines([]);
+      setDataReady(false);
 
-      // Kick off real API call immediately in background
       const apiPromise = scanWebsite(url);
 
-      // Run animated steps as UI overlay while we wait
       for (let i = 0; i < AGENT_STEPS.length; i++) {
         setActiveStep(i);
         for (const line of AGENT_STEPS[i].logLines) {
@@ -40,23 +41,13 @@ export function useScanner(): UseScannerReturn {
         setDoneSteps((prev) => [...prev, i]);
       }
 
-      // Wait for the real scan result
+      addLog("AWAITING INTELLIGENCE COMPILATION...");
+      setPhase("compiling");
+
       try {
-        addLog("AWAITING INTELLIGENCE COMPILATION...");
         const scanResults = await apiPromise;
-
-        addLog(
-          `SCAN COMPLETE — ${scanResults.issues_found} ANOMALIES DETECTED`,
-        );
-        await delay(400);
-
         setResults(scanResults);
-        setPhase("results");
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Unknown error";
-        addLog(`ERROR: ${message}`);
-
-        // Show error state so the UI does not hang on the scanning screen
         setResults({
           url,
           pages_scanned: 0,
@@ -65,11 +56,16 @@ export function useScanner(): UseScannerReturn {
           health_status: "Error",
           issues: [],
         });
-        setPhase("results");
+      } finally {
+        setDataReady(true);
       }
     },
     [addLog],
   );
+
+  const confirmResults = useCallback((): void => {
+    setPhase("results");
+  }, []);
 
   const reset = useCallback((): void => {
     setPhase("home");
@@ -77,6 +73,7 @@ export function useScanner(): UseScannerReturn {
     setLogLines([]);
     setActiveStep(-1);
     setDoneSteps([]);
+    setDataReady(false);
   }, []);
 
   return {
@@ -86,7 +83,9 @@ export function useScanner(): UseScannerReturn {
     logLines,
     results,
     scannedUrl,
+    dataReady,
     startScan,
+    confirmResults,
     reset,
   };
 }

@@ -28,7 +28,6 @@ const NavBar: FC<NavBarProps> = ({ phase, onReset }) => {
         WebkitBackdropFilter: "blur(20px)",
       }}
     >
-      {/* Logo */}
       <button
         onClick={onReset}
         className="flex items-center gap-3 select-none border-none bg-transparent cursor-pointer"
@@ -61,7 +60,6 @@ const NavBar: FC<NavBarProps> = ({ phase, onReset }) => {
         </span>
       </button>
 
-      {/* Phase status */}
       <div className="flex items-center gap-2">
         <div
           style={{

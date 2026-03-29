@@ -8,76 +8,129 @@ interface IssueCardProps {
 }
 
 const IssueCard: FC<IssueCardProps> = ({ issue, index }) => {
-  const [open, setOpen] = useState<boolean>(false);
-  const [hov, setHov] = useState<boolean>(false);
-  const [imgError, setImgError] = useState<boolean>(false);
-  const [imgLoaded, setImgLoaded] = useState<boolean>(false);
-  const [lightbox, setLightbox] = useState<boolean>(false);
+  const [open, setOpen] = useState(false);
+  const [hov, setHov] = useState(false);
+  const [imgError, setImgError] = useState(false);
+  const [imgLoaded, setImgLoaded] = useState(false);
+  const [lightbox, setLightbox] = useState(false);
   const s = SEV[issue.severity];
-
   const hasScreenshot = !!issue.screenshot && !imgError;
 
   const aiRows = [
     {
       label: "◈ NEURAL ANALYSIS",
       val: issue.explanation,
-      labelColor: "rgba(0,245,255,0.35)",
-      valColor: "#8a9bb5",
+      labelColor: "rgba(0,245,255,0.4)",
+      valColor: "#8090a8",
     },
     {
       label: "◎ IMPACT VECTOR",
       val: issue.impact,
-      labelColor: "rgba(255,180,0,0.45)",
-      valColor: "#9a8e7a",
+      labelColor: "rgba(255,180,0,0.5)",
+      valColor: "#90806a",
     },
     {
       label: "⬡ REMEDIATION PROTOCOL",
       val: issue.fix_suggestion,
-      labelColor: "rgba(0,245,255,0.55)",
-      valColor: "rgba(0,245,255,0.82)",
+      labelColor: "rgba(0,245,255,0.6)",
+      valColor: "rgba(0,245,255,0.85)",
     },
   ];
 
   return (
     <>
       <div
+        style={{
+          borderRadius: "8px",
+          overflow: "hidden",
+          border: `1px solid ${hov ? "rgba(0,245,255,0.18)" : open ? "rgba(0,245,255,0.12)" : "rgba(255,255,255,0.055)"}`,
+          background: hov ? "rgba(0,245,255,0.028)" : "rgba(255,255,255,0.013)",
+          animation: `fadeUp 0.55s ${index * 0.07}s ease both`,
+          opacity: 0,
+          transform: hov ? "translateY(-2px)" : "translateY(0)",
+          transition:
+            "border-color 0.2s,background 0.2s,transform 0.2s,box-shadow 0.2s",
+          boxShadow: hov
+            ? "0 8px 32px rgba(0,0,0,0.5),0 0 16px rgba(0,245,255,0.04)"
+            : open
+              ? "0 4px 20px rgba(0,0,0,0.4)"
+              : "none",
+          cursor: "pointer",
+        }}
         onClick={() => setOpen((o) => !o)}
         onMouseEnter={() => setHov(true)}
         onMouseLeave={() => setHov(false)}
-        className="cursor-pointer overflow-hidden rounded-[4px] transition-all duration-200"
-        style={{
-          background: hov ? "rgba(0,245,255,0.025)" : "rgba(255,255,255,0.012)",
-          border: `1px solid ${hov ? "rgba(0,245,255,0.15)" : "rgba(255,255,255,0.05)"}`,
-          boxShadow: hov ? "0 0 20px rgba(0,245,255,0.05)" : "none",
-          animation: `fadeUp 0.5s ${index * 0.08}s ease both`,
-          opacity: 0,
-        }}
       >
-        <div className="flex items-start gap-4 px-5 py-4">
-          {/* Severity dot */}
+        {/* ── Header row ── */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: "14px",
+            padding: "16px 20px",
+          }}
+        >
+          {/* Severity dot + left accent line */}
           <div
-            className="mt-[6px] h-[6px] w-[6px] shrink-0 rounded-full"
-            style={{ background: s.dot, boxShadow: s.bloom }}
-          />
-
-          <div className="min-w-0 flex-1">
-            {/* Header */}
-            <div className="mb-2 flex flex-wrap items-center gap-2">
-              <span
-                className="font-orbitron"
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "4px",
+              paddingTop: "6px",
+              flexShrink: 0,
+            }}
+          >
+            <div
+              style={{
+                width: 7,
+                height: 7,
+                borderRadius: "50%",
+                background: s.dot,
+                boxShadow: s.bloom,
+                flexShrink: 0,
+              }}
+            />
+            {open && (
+              <div
                 style={{
+                  width: 1,
+                  flex: 1,
+                  minHeight: "8px",
+                  background: `linear-gradient(to bottom,${s.dot}60,transparent)`,
+                  marginTop: "4px",
+                }}
+              />
+            )}
+          </div>
+
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                alignItems: "center",
+                gap: "8px",
+                marginBottom: "6px",
+              }}
+            >
+              <span
+                style={{
+                  fontFamily: "'Orbitron',monospace",
                   fontSize: "11px",
-                  color: "#FFFFFF",
+                  color: "#fff",
                   letterSpacing: "0.08em",
                 }}
               >
                 {issue.issue_type}
               </span>
               <span
-                className="font-mono-tech rounded-[2px] px-2 py-[2px]"
                 style={{
+                  fontFamily: "'Share Tech Mono',monospace",
                   fontSize: "8px",
                   letterSpacing: "0.15em",
+                  padding: "2px 8px",
+                  borderRadius: "3px",
                   background: s.bg,
                   color: s.text,
                   border: `1px solid ${s.border}`,
@@ -87,8 +140,8 @@ const IssueCard: FC<IssueCardProps> = ({ issue, index }) => {
                 {issue.severity.toUpperCase()}
               </span>
               <span
-                className="font-mono-tech"
                 style={{
+                  fontFamily: "'Share Tech Mono',monospace",
                   fontSize: "9px",
                   color: "rgba(0,245,255,0.3)",
                   letterSpacing: "0.1em",
@@ -96,31 +149,29 @@ const IssueCard: FC<IssueCardProps> = ({ issue, index }) => {
               >
                 {issue.page}
               </span>
-              {/* Screenshot indicator badge */}
               {hasScreenshot && (
                 <span
-                  className="font-mono-tech"
                   style={{
+                    fontFamily: "'Share Tech Mono',monospace",
                     fontSize: "7px",
                     letterSpacing: "0.12em",
-                    padding: "1px 6px",
-                    borderRadius: "2px",
+                    padding: "1px 7px",
+                    borderRadius: "3px",
                     background: "rgba(0,245,255,0.06)",
-                    border: "1px solid rgba(0,245,255,0.15)",
-                    color: "rgba(0,245,255,0.5)",
+                    border: "1px solid rgba(0,245,255,0.18)",
+                    color: "rgba(0,245,255,0.55)",
                   }}
                 >
                   ◉ SCREENSHOT
                 </span>
               )}
             </div>
-
             <div
-              className="font-exo"
               style={{
+                fontFamily: "'Exo 2',sans-serif",
                 fontSize: "13px",
                 lineHeight: 1.7,
-                color: "#b0bec8",
+                color: "#a0b0c0",
                 letterSpacing: "0.01em",
               }}
             >
@@ -128,13 +179,15 @@ const IssueCard: FC<IssueCardProps> = ({ issue, index }) => {
             </div>
           </div>
 
-          {/* Expand toggle */}
+          {/* Expand chevron */}
           <div
-            className="shrink-0 font-mono-tech transition-transform duration-200"
             style={{
-              fontSize: "10px",
-              color: hov ? "rgba(0,245,255,0.5)" : "rgba(255,255,255,0.2)",
-              transform: open ? "rotate(180deg)" : "rotate(0deg)",
+              flexShrink: 0,
+              fontFamily: "'Share Tech Mono',monospace",
+              fontSize: "12px",
+              color: hov ? "rgba(0,245,255,0.55)" : "rgba(255,255,255,0.18)",
+              transform: open ? "rotate(180deg)" : "rotate(0)",
+              transition: "transform 0.25s ease,color 0.2s",
               marginTop: "2px",
             }}
           >
@@ -142,25 +195,30 @@ const IssueCard: FC<IssueCardProps> = ({ issue, index }) => {
           </div>
         </div>
 
-        {/* Expanded panel */}
+        {/* ── Expanded panel ── */}
         {open && (
           <div
-            className="px-5 pt-4 pb-5 pl-[42px]"
+            onClick={(e) => e.stopPropagation()}
             style={{
               borderTop: "1px solid rgba(0,245,255,0.07)",
-              background: "rgba(0,0,0,0.25)",
+              background: "rgba(0,0,0,0.28)",
+              padding: "20px 20px 22px 40px",
+              animation: "expandDown 0.25s ease both",
             }}
-            onClick={(e) => e.stopPropagation()}
           >
             {/* Screenshot */}
             {hasScreenshot && (
-              <div className="mb-5">
+              <div style={{ marginBottom: "20px" }}>
                 <div
-                  className="font-mono-tech mb-2 flex items-center gap-2"
                   style={{
+                    fontFamily: "'Share Tech Mono',monospace",
                     fontSize: "8px",
                     letterSpacing: "0.2em",
                     color: "rgba(0,245,255,0.35)",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    marginBottom: "8px",
                   }}
                 >
                   ◉ PAGE SCREENSHOT
@@ -169,8 +227,8 @@ const IssueCard: FC<IssueCardProps> = ({ issue, index }) => {
                       flex: 1,
                       height: "1px",
                       background:
-                        "linear-gradient(90deg, rgba(0,245,255,0.2), transparent)",
-                      opacity: 0.5,
+                        "linear-gradient(90deg,rgba(0,245,255,0.18),transparent)",
+                      opacity: 0.6,
                     }}
                   />
                 </div>
@@ -178,7 +236,7 @@ const IssueCard: FC<IssueCardProps> = ({ issue, index }) => {
                   onClick={() => setLightbox(true)}
                   style={{
                     position: "relative",
-                    borderRadius: "4px",
+                    borderRadius: "6px",
                     overflow: "hidden",
                     border: "1px solid rgba(0,245,255,0.12)",
                     background: "rgba(0,0,0,0.4)",
@@ -189,24 +247,22 @@ const IssueCard: FC<IssueCardProps> = ({ issue, index }) => {
                     justifyContent: "center",
                   }}
                 >
-                  {/* Loading skeleton */}
                   {!imgLoaded && (
                     <div
                       style={{
                         position: "absolute",
                         inset: 0,
-                        background: "rgba(0,245,255,0.03)",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
                       }}
                     >
                       <span
-                        className="font-mono-tech"
                         style={{
+                          fontFamily: "'Share Tech Mono',monospace",
                           fontSize: "8px",
-                          letterSpacing: "0.15em",
                           color: "rgba(0,245,255,0.3)",
+                          letterSpacing: "0.15em",
                         }}
                       >
                         LOADING...
@@ -224,41 +280,25 @@ const IssueCard: FC<IssueCardProps> = ({ issue, index }) => {
                       objectFit: "cover",
                       objectPosition: "top",
                       display: imgLoaded ? "block" : "none",
-                      transition: "opacity 0.2s",
                     }}
                   />
-                  {/* Zoom hint overlay */}
                   {imgLoaded && (
                     <div
                       style={{
                         position: "absolute",
-                        inset: 0,
-                        background:
-                          "linear-gradient(to top, rgba(0,0,0,0.5) 0%, transparent 40%)",
-                        display: "flex",
-                        alignItems: "flex-end",
-                        justifyContent: "flex-end",
-                        padding: "8px",
-                        opacity: 0,
-                        transition: "opacity 0.2s",
-                      }}
-                      onMouseEnter={(e) => {
-                        (e.currentTarget as HTMLDivElement).style.opacity = "1";
-                      }}
-                      onMouseLeave={(e) => {
-                        (e.currentTarget as HTMLDivElement).style.opacity = "0";
+                        bottom: 0,
+                        right: 0,
+                        padding: "6px 10px",
+                        background: "rgba(0,0,0,0.7)",
+                        borderRadius: "6px 0 6px 0",
                       }}
                     >
                       <span
-                        className="font-mono-tech"
                         style={{
+                          fontFamily: "'Share Tech Mono',monospace",
                           fontSize: "7px",
                           letterSpacing: "0.15em",
-                          color: "rgba(0,245,255,0.8)",
-                          padding: "3px 8px",
-                          background: "rgba(0,0,0,0.6)",
-                          borderRadius: "2px",
-                          border: "1px solid rgba(0,245,255,0.2)",
+                          color: "rgba(0,245,255,0.7)",
                         }}
                       >
                         ⊕ EXPAND
@@ -269,16 +309,22 @@ const IssueCard: FC<IssueCardProps> = ({ issue, index }) => {
               </div>
             )}
 
-            {/* AI analysis rows */}
-            <div className="flex flex-col gap-5">
+            {/* AI rows */}
+            <div
+              style={{ display: "flex", flexDirection: "column", gap: "18px" }}
+            >
               {aiRows.map((row) => (
                 <div key={row.label}>
                   <div
-                    className="font-mono-tech mb-[7px] flex items-center gap-2"
                     style={{
+                      fontFamily: "'Share Tech Mono',monospace",
                       fontSize: "8px",
                       letterSpacing: "0.2em",
                       color: row.labelColor,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      marginBottom: "7px",
                     }}
                   >
                     {row.label}
@@ -286,14 +332,14 @@ const IssueCard: FC<IssueCardProps> = ({ issue, index }) => {
                       style={{
                         flex: 1,
                         height: "1px",
-                        background: `linear-gradient(90deg, ${row.labelColor}, transparent)`,
-                        opacity: 0.5,
+                        background: `linear-gradient(90deg,${row.labelColor},transparent)`,
+                        opacity: 0.4,
                       }}
                     />
                   </div>
                   <div
-                    className="font-exo"
                     style={{
+                      fontFamily: "'Exo 2',sans-serif",
                       fontSize: "13px",
                       lineHeight: 1.75,
                       color: row.valColor,
@@ -319,7 +365,6 @@ const IssueCard: FC<IssueCardProps> = ({ issue, index }) => {
             zIndex: 99999,
             background: "rgba(0,0,0,0.92)",
             backdropFilter: "blur(8px)",
-            WebkitBackdropFilter: "blur(8px)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -341,12 +386,11 @@ const IssueCard: FC<IssueCardProps> = ({ issue, index }) => {
                 maxWidth: "100%",
                 maxHeight: "85vh",
                 objectFit: "contain",
-                borderRadius: "4px",
+                borderRadius: "6px",
                 border: "1px solid rgba(0,245,255,0.15)",
-                boxShadow: "0 0 60px rgba(0,0,0,0.8)",
+                boxShadow: "0 0 60px rgba(0,0,0,0.9)",
               }}
             />
-            {/* Meta bar */}
             <div
               style={{
                 position: "absolute",
@@ -354,32 +398,31 @@ const IssueCard: FC<IssueCardProps> = ({ issue, index }) => {
                 left: 0,
                 right: 0,
                 padding: "10px 14px",
-                background: "rgba(0,0,0,0.75)",
-                borderRadius: "0 0 4px 4px",
+                background: "rgba(0,0,0,0.7)",
+                borderRadius: "0 0 6px 6px",
                 display: "flex",
                 justifyContent: "space-between",
-                alignItems: "center",
               }}
             >
               <span
-                className="font-mono-tech"
                 style={{
+                  fontFamily: "'Share Tech Mono',monospace",
                   fontSize: "8px",
-                  letterSpacing: "0.12em",
                   color: "rgba(0,245,255,0.6)",
+                  letterSpacing: "0.12em",
                 }}
               >
                 {issue.page}
               </span>
               <span
-                className="font-mono-tech"
                 style={{
+                  fontFamily: "'Share Tech Mono',monospace",
                   fontSize: "7px",
+                  color: "rgba(255,255,255,0.28)",
                   letterSpacing: "0.15em",
-                  color: "rgba(255,255,255,0.3)",
                 }}
               >
-                CLICK ANYWHERE TO CLOSE
+                CLICK TO CLOSE
               </span>
             </div>
           </div>

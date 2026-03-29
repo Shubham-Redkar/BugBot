@@ -19,7 +19,8 @@ const NeuralMesh: FC = () => {
     const rows = Math.ceil(height / GRID) + 1;
 
     // Sparks
-    const sparks: { x: number; y: number; life: number; maxLife: number }[] = [];
+    const sparks: { x: number; y: number; life: number; maxLife: number }[] =
+      [];
     let sparkTimer = 0;
 
     let breathPhase = 0;

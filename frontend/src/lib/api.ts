@@ -1,17 +1,9 @@
-// ─── Backend API configuration ───────────────────────────────────────────────
 export const API_BASE_URL =
-  import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+  import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 
-/**
- * Convert a raw screenshot path returned by the backend
- * (e.g. "screenshots/broken_images_0_20250328_123456.png")
- * into a full URL the browser can load.
- */
 function screenshotUrl(raw: string | null | undefined): string | null {
   if (!raw) return null;
-  // If it's already a full URL, return as-is
   if (raw.startsWith("http")) return raw;
-  // Strip any leading "./" or "/"
   const clean = raw.replace(/^\.?\//, "");
   return `${API_BASE_URL}/${clean}`;
 }
@@ -54,7 +46,6 @@ export async function scanWebsite(
       explanation: issue.explanation ?? "",
       impact: issue.impact ?? "",
       fix_suggestion: issue.fix_suggestion ?? "",
-      // Convert local path → full URL so browser/reports can load it
       screenshot: screenshotUrl(issue.screenshot as string | null),
     })),
   };
