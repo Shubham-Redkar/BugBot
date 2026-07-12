@@ -4,6 +4,7 @@ import pytest
 from pydantic import ValidationError
 
 from models import Finding, ScanContext, ScanError, ScanResult, ScannedPage
+from models.response_models import IssueModel
 
 
 def test_scan_context_defaults_are_independent():
@@ -15,6 +16,25 @@ def test_scan_context_defaults_are_independent():
     assert first.scan_id != second.scan_id
     assert second.errors == []
     assert first.started_at.tzinfo is not None
+
+
+def test_legacy_issue_evidence_defaults_are_independent():
+    first = IssueModel(
+        page="https://example.com",
+        issue_type="Console JavaScript Error",
+        severity="High",
+        description="ReferenceError",
+    )
+    second = IssueModel(
+        page="https://example.org",
+        issue_type="Console JavaScript Error",
+        severity="High",
+        description="TypeError",
+    )
+
+    first.evidence["console_messages"] = ["ReferenceError"]
+
+    assert second.evidence == {}
 
 
 def test_partial_scan_result_preserves_pages_findings_and_errors():

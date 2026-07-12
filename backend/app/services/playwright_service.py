@@ -1,6 +1,8 @@
 import re
 import asyncio
-import concurrent.futures
+import time
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from urllib.parse import urljoin
 from playwright.async_api import (
     async_playwright,
@@ -12,6 +14,14 @@ from models.response_models import ScanResultModel, IssueModel
 from utils.constants import MAX_PAGES, HEADLESS
 
 SCAN_TIMEOUT_SECONDS = 120
+
+
+@dataclass
+class PageScanResult:
+    url: str
+    title: str = ""
+    issues: list[dict] = field(default_factory=list)
+    timed_out: bool = False
 
 
 async def _crawl(start_url: str) -> list[str]:
@@ -379,13 +389,21 @@ async def _check_console_errors(page, url, idx, issues, console_errors: list):
             path = get_screenshot_path("console_errors", idx)
             await page.screenshot(path=path, full_page=True)
 
+            messages = list(dict.fromkeys(console_errors))
+            preview = "; ".join(messages[:3])
+            if len(messages) > 3:
+                preview += f"; and {len(messages) - 3} more"
+
             issues.append(
                 IssueModel(
                     page=url,
                     issue_type="Console JavaScript Error",
                     severity="High",
-                    description=f"{len(console_errors)} JS console error(s) detected.",
+                    description=(
+                        f"{len(messages)} unique JS error(s) detected: {preview}"
+                    ),
                     screenshot=path,
+                    evidence={"console_messages": messages},
                 ).model_dump()
             )
     except Exception as e:
@@ -461,26 +479,28 @@ async def _run_page_checks(page, url, idx, issues, console_errors: list):
     await _check_empty_links(page, url, idx, issues)
 
 
-async def _scan_page(context, url: str, idx: int) -> list[dict]:
+async def _scan_page(context, url: str, idx: int) -> PageScanResult:
     """
     Scan a single page and return its issues as an independent list.
     Each page owns its own list — no shared mutable state across concurrent scans.
     """
-    page_issues: list[dict] = []
+    result = PageScanResult(url=url)
     page = await context.new_page()
 
-    console_errors = []
+    console_errors: list[str] = []
     page.on(
         "console",
         lambda msg: console_errors.append(msg.text) if msg.type == "error" else None,
     )
+    page.on("pageerror", lambda error: console_errors.append(str(error)))
 
     try:
         res = await page.goto(url, wait_until="load", timeout=15000)
         await page.wait_for_timeout(1500)
+        result.title = await page.title()
 
         if res and res.status >= 400:
-            page_issues.append(
+            result.issues.append(
                 IssueModel(
                     page=url,
                     issue_type="Broken Page",
@@ -489,15 +509,16 @@ async def _scan_page(context, url: str, idx: int) -> list[dict]:
                 ).model_dump()
             )
 
-        await _run_page_checks(page, url, idx, page_issues, console_errors)
+        await _run_page_checks(page, url, idx, result.issues, console_errors)
 
         await _trigger_popups(page)
-        await _scan_popup_forms(page, url, idx, page_issues)
+        await _scan_popup_forms(page, url, idx, result.issues)
 
-        await _run_form_checks(page, url, idx, page_issues)
+        await _run_form_checks(page, url, idx, result.issues)
 
     except PlaywrightTimeoutError:
-        page_issues.append(
+        result.timed_out = True
+        result.issues.append(
             IssueModel(
                 page=url,
                 issue_type="Page Load Failure",
@@ -512,7 +533,7 @@ async def _scan_page(context, url: str, idx: int) -> list[dict]:
     finally:
         await page.close()
 
-    return page_issues
+    return result
 
 
 def _check_duplicate_titles(page_titles: dict[str, str]) -> list[dict]:
@@ -545,62 +566,79 @@ def _check_duplicate_titles(page_titles: dict[str, str]) -> list[dict]:
     return dup_issues
 
 
-async def _test(start_url: str):
-    import time
-    from datetime import datetime, timezone
+async def _scan_pages_with_timeout(
+    context, pages: list[str], timeout: float = SCAN_TIMEOUT_SECONDS
+) -> list[PageScanResult]:
+    """Scan pages concurrently while retaining every result completed on time."""
+    tasks = [
+        asyncio.create_task(_scan_page(context, url, idx))
+        for idx, url in enumerate(pages)
+    ]
+    done, pending = await asyncio.wait(tasks, timeout=timeout)
+    results_by_index: dict[int, PageScanResult] = {}
 
+    for idx, task in enumerate(tasks):
+        if task not in done:
+            continue
+
+        try:
+            results_by_index[idx] = task.result()
+        except Exception as exc:
+            results_by_index[idx] = PageScanResult(
+                url=pages[idx],
+                issues=[
+                    IssueModel(
+                        page=pages[idx],
+                        issue_type="Page Scan Failure",
+                        severity="High",
+                        description=f"Page scan failed: {exc}",
+                    ).model_dump()
+                ],
+            )
+
+    for task in pending:
+        task.cancel()
+    if pending:
+        await asyncio.gather(*pending, return_exceptions=True)
+
+    for idx, task in enumerate(tasks):
+        if task in pending:
+            results_by_index[idx] = PageScanResult(
+                url=pages[idx],
+                timed_out=True,
+                issues=[
+                    IssueModel(
+                        page=pages[idx],
+                        issue_type="Page Load Failure",
+                        severity="High",
+                        description="Global scan timeout",
+                    ).model_dump()
+                ],
+            )
+
+    return [results_by_index[idx] for idx in range(len(pages))]
+
+
+async def _test(start_url: str):
     scan_started_at = datetime.now(timezone.utc).isoformat()
     scan_start_time = time.monotonic()
 
     pages = await _crawl(start_url)
-
-    page_titles: dict[str, str] = {}
 
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=HEADLESS)
         context = await browser.new_context()
 
         try:
-            results: list[list[dict]] = await asyncio.wait_for(
-                asyncio.gather(
-                    *[_scan_page(context, url, idx) for idx, url in enumerate(pages)]
-                ),
-                timeout=SCAN_TIMEOUT_SECONDS,
+            page_results = await _scan_pages_with_timeout(
+                context, pages, SCAN_TIMEOUT_SECONDS
             )
-
-            for url, page_issues in zip(pages, results):
-                title_issues = [
-                    i
-                    for i in page_issues
-                    if i.get("issue_type") == "Missing Page Title"
-                ]
-                page_titles[url] = "" if title_issues else url  # placeholder, see below
-
-        except asyncio.TimeoutError:
-            print(
-                f"[playwright] Global scan timeout ({SCAN_TIMEOUT_SECONDS}s) "
-                f"reached for {start_url} — returning partial results."
-            )
-            results = [[] for _ in pages]
-
         finally:
             await browser.close()
 
-    issues: list[dict] = [issue for page_issues in results for issue in page_issues]
-
-    if len(pages) > 1:
-        async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=HEADLESS)
-            page = await browser.new_page()
-            for url in pages:
-                try:
-                    await page.goto(url, wait_until="load", timeout=10000)
-                    page_titles[url] = await page.title()
-                except Exception:
-                    page_titles[url] = ""
-            await browser.close()
-
-        issues += _check_duplicate_titles(page_titles)
+    issues = [issue for result in page_results for issue in result.issues]
+    page_titles = {result.url: result.title for result in page_results}
+    issues += _check_duplicate_titles(page_titles)
 
     scan_duration = round(time.monotonic() - scan_start_time, 2)
 
@@ -620,19 +658,5 @@ async def _test(start_url: str):
     ).model_dump()
 
 
-def _run_in_thread(coro_fn):
-    def run():
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            return loop.run_until_complete(coro_fn())
-        finally:
-            loop.close()
-
-    with concurrent.futures.ThreadPoolExecutor() as pool:
-        return pool.submit(run).result()
-
-
 async def test_website(start_url: str):
-    loop = asyncio.get_event_loop()
-    return await loop.run_in_executor(None, _run_in_thread, lambda: _test(start_url))
+    return await _test(start_url)
