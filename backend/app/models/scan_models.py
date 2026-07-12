@@ -4,7 +4,7 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
 
-from app.models.finding_models import Finding
+from .finding_models import Finding
 
 
 ScanStatus = Literal[

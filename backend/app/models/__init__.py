@@ -1,5 +1,5 @@
-from app.models.finding_models import Finding, FindingEvidence, Severity
-from app.models.scan_models import (
+from .finding_models import Finding, FindingEvidence, Severity
+from .scan_models import (
     ScannedPage,
     ScanContext,
     ScanError,
