@@ -53,6 +53,20 @@ def test_settings_require_async_postgres_driver():
 
 
 def test_secret_is_masked_in_settings_representation():
-    settings = Settings(_env_file=None, xai_api_key="super-secret")
+    settings = Settings(_env_file=None, groq_api_key="super-secret")
 
     assert "super-secret" not in repr(settings)
+
+
+def test_settings_require_redis_celery_broker():
+    with pytest.raises(ValidationError):
+        Settings(_env_file=None, celery_broker_url="amqp://localhost")
+
+
+def test_settings_require_ordered_celery_time_limits():
+    with pytest.raises(ValidationError):
+        Settings(
+            _env_file=None,
+            celery_task_soft_time_limit_seconds=600,
+            celery_task_time_limit_seconds=600,
+        )

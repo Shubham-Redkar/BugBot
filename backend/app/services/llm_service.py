@@ -13,11 +13,11 @@ def get_client() -> AsyncOpenAI:
     global _client
     if _client is None:
         settings = get_settings()
-        if settings.xai_api_key is None:
-            raise RuntimeError("XAI_API_KEY is not configured")
+        if settings.groq_api_key is None:
+            raise RuntimeError("GROQ_API_KEY is not configured")
         _client = AsyncOpenAI(
-            api_key=settings.xai_api_key.get_secret_value(),
-            base_url=settings.xai_base_url,
+            api_key=settings.groq_api_key.get_secret_value(),
+            base_url=settings.groq_base_url,
             timeout=settings.llm_timeout_seconds,
         )
     return _client

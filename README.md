@@ -52,11 +52,12 @@ Structured Report Output
 #  Tech Stack
 
 ### Backend
-- FastAPI  
-- Uvicorn  
+- FastAPI
+- Uvicorn
+- Celery with Redis
 
 ### AI / LLM
-- Grok API (xAI)  
+- Groq API with Llama 3.3 70B
 
 ### Web Scraping / Testing
 - Playwright  
@@ -186,17 +187,42 @@ playwright install chromium
 Create a `.env` file:
 
 ```
-XAI_API_KEY=your_api_key_here
+GROQ_API_KEY=your_api_key_here
+LLM_MODEL=llama-3.3-70b-versatile
 DATABASE_URL=postgresql+asyncpg://bugbot:bugbot@localhost:5432/bugbot
+CELERY_BROKER_URL=redis://localhost:6379/0
 ```
 
 ---
 
-#  Run the Project
+# Run the Project
+
+Start Redis once for local development:
+
+```bash
+docker run --name bugbot-redis -p 6379:6379 -d redis:7-alpine
+```
+
+Apply database migrations:
 
 ```bash
 alembic upgrade head
-uvicorn app.main:app --reload
+```
+
+Start the API from `backend/app`:
+
+```bash
+cd app
+uvicorn main:app --reload
+```
+
+Start the Celery worker in another terminal from `backend/app`:
+
+```bash
+celery -A celery_app.celery_app worker \
+  --loglevel=INFO \
+  --queues=scans \
+  --concurrency=2
 ```
 
 Open in browser:

@@ -1,7 +1,7 @@
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import Field, SecretStr, field_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -27,12 +27,18 @@ class Settings(BaseSettings):
     database_max_overflow: int = Field(default=10, ge=0)
     database_echo: bool = False
 
-    xai_api_key: SecretStr | None = None
-    xai_base_url: str = "https://api.x.ai/v1"
-    llm_model: str = Field(default="grok-3", min_length=1)
+    groq_api_key: SecretStr | None = None
+    groq_base_url: str = "https://api.groq.com/openai/v1"
+    llm_model: str = Field(default="llama-3.3-70b-versatile", min_length=1)
     llm_max_tokens: int = Field(default=1024, gt=0)
     llm_concurrency: int = Field(default=3, gt=0)
     llm_timeout_seconds: float = Field(default=30, gt=0)
+
+    celery_broker_url: str = "redis://localhost:6379/0"
+    celery_visibility_timeout_seconds: int = Field(default=1800, gt=0)
+    celery_task_soft_time_limit_seconds: int = Field(default=900, gt=0)
+    celery_task_time_limit_seconds: int = Field(default=960, gt=0)
+    celery_task_always_eager: bool = False
 
     max_pages: int = Field(default=5, gt=0, le=100)
     headless: bool = True
@@ -59,6 +65,19 @@ class Settings(BaseSettings):
         if not url.startswith("postgresql+asyncpg://"):
             raise ValueError("DATABASE_URL must use postgresql+asyncpg://")
         return url
+
+    @field_validator("celery_broker_url")
+    @classmethod
+    def require_redis_broker(cls, url: str) -> str:
+        if not url.startswith(("redis://", "rediss://")):
+            raise ValueError("CELERY_BROKER_URL must use redis:// or rediss://")
+        return url
+
+    @model_validator(mode="after")
+    def validate_celery_time_limits(self):
+        if self.celery_task_soft_time_limit_seconds >= self.celery_task_time_limit_seconds:
+            raise ValueError("Celery soft time limit must be lower than the hard limit")
+        return self
 
 
 @lru_cache
