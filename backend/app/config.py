@@ -22,10 +22,6 @@ class Settings(BaseSettings):
         default_factory=lambda: ["http://localhost:5173"]
     )
 
-    mongo_uri: str = Field(default="mongodb://localhost:27017", min_length=1)
-    db_name: str = Field(default="bugbot", min_length=1)
-    collection_name: str = Field(default="scans", min_length=1)
-
     database_url: str = "postgresql+asyncpg://bugbot:bugbot@localhost:5432/bugbot"
     database_pool_size: int = Field(default=5, gt=0)
     database_max_overflow: int = Field(default=10, ge=0)

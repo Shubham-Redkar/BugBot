@@ -64,7 +64,9 @@ Structured Report Output
 - BeautifulSoup  
 
 ### Database
-- MongoDB (Motor)  
+- PostgreSQL
+- SQLAlchemy (async)
+- Alembic migrations
 
 ### Utilities
 - Pydantic  
@@ -255,7 +257,8 @@ pip install -r requirements.txt
 Create a `.env` file:
 
 ```
-GROK_API_KEY=your_api_key_here
+XAI_API_KEY=your_api_key_here
+DATABASE_URL=postgresql+asyncpg://bugbot:bugbot@localhost:5432/bugbot
 ```
 
 ---
@@ -344,5 +347,3 @@ Open in browser:
 #  Final Note
 
 BugBot transforms traditional QA into an intelligent, autonomous, AI-driven system — making debugging faster, smarter, and scalable.
-
-

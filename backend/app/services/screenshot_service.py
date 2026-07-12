@@ -1,11 +1,10 @@
-import os
 from uuid import uuid4
 
-from utils.constants import SCREENSHOT_DIR
-
-os.makedirs(SCREENSHOT_DIR, exist_ok=True)
+from config import get_settings
 
 
 def get_screenshot_path(prefix: str, index: int) -> str:
+    screenshot_dir = get_settings().screenshot_dir
+    screenshot_dir.mkdir(parents=True, exist_ok=True)
     filename = f"{prefix}_{index}_{uuid4().hex}.png"
-    return os.path.join(SCREENSHOT_DIR, filename)
+    return str(screenshot_dir / filename)

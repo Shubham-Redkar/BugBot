@@ -7,7 +7,6 @@ if sys.platform == "win32":
 
 from api.routes import router
 from config import get_settings
-from db.database import close_database
 from db.postgres import close_postgres
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -22,7 +21,6 @@ settings = get_settings()
 async def lifespan(_app: FastAPI):
     settings.screenshot_dir.mkdir(parents=True, exist_ok=True)
     yield
-    close_database()
     await close_postgres()
     await close_llm_client()
 
