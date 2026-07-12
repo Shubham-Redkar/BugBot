@@ -10,6 +10,7 @@ from playwright.async_api import (
 from config import get_settings
 from utils.helpers import clean_links
 from services.screenshot_service import get_screenshot_path
+from services.url_security import UnsafeUrlError, UrlSafetyValidator
 from models.response_models import IssueModel
 
 
@@ -35,20 +36,31 @@ class PageScanResult:
         }
 
 
-async def _crawl(start_url: str) -> list[str]:
+async def _crawl(
+    start_url: str, validator: UrlSafetyValidator | None = None
+) -> list[str]:
     settings = get_settings()
+    validator = validator or UrlSafetyValidator()
     discovered = []
 
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=settings.headless)
-        page = await browser.new_page()
+        context = await browser.new_context(service_workers="block")
+        await context.route("**/*", validator.guard_route)
+        page = await context.new_page()
 
         try:
             await page.goto(start_url, wait_until="load", timeout=15000)
             hrefs = await page.locator("a").evaluate_all(
                 "elements => elements.map(el => el.getAttribute('href'))"
             )
-            discovered = clean_links(start_url, hrefs)
+            candidates = clean_links(start_url, hrefs)
+            for candidate in candidates:
+                try:
+                    await validator.validate(candidate)
+                    discovered.append(candidate)
+                except UnsafeUrlError:
+                    continue
 
         except Exception as e:
             print(f"[playwright] Crawl error: {e}")
@@ -571,14 +583,17 @@ async def _scan_pages_with_timeout(
 
 async def _test(start_url: str):
     settings = get_settings()
+    validator = UrlSafetyValidator()
+    await validator.validate(start_url)
     scan_started_at = datetime.now(timezone.utc).isoformat()
     scan_start_time = time.monotonic()
 
-    pages = await _crawl(start_url)
+    pages = await _crawl(start_url, validator)
 
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=settings.headless)
-        context = await browser.new_context()
+        context = await browser.new_context(service_workers="block")
+        await context.route("**/*", validator.guard_route)
 
         try:
             page_results = await _scan_pages_with_timeout(

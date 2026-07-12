@@ -10,6 +10,7 @@ from agents.scan_coordinator import run_scan
 from db.postgres import get_db_session
 from models.request_models import ScanRequest
 from repositories.scan_repository import ScanRepository
+from services.url_security import UnsafeUrlError
 
 
 logger = logging.getLogger(__name__)
@@ -29,6 +30,11 @@ async def scan_website(data: ScanRequest, session: DatabaseSession):
         result = await run_scan(str(data.url))
         scan_id = await ScanRepository(session).create(result)
         return {"scan_id": str(scan_id), "result": result}
+    except UnsafeUrlError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
     except SQLAlchemyError as exc:
         logger.exception("Failed to persist scan result", exc_info=exc)
         raise HTTPException(
