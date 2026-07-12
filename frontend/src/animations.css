@@ -1,0 +1,94 @@
+.sr-hidden {
+  opacity: 0;
+  transform: translateY(38px);
+  transition:
+    opacity 0.75s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.75s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+
+.sr-hidden.is-revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@keyframes waveBreathe {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes waveGroupBreath {
+  0%,
+  100% {
+    transform: scaleY(1);
+  }
+  40% {
+    transform: scaleY(1.045);
+  }
+  70% {
+    transform: scaleY(0.972);
+  }
+}
+
+@keyframes waveOrb {
+  0%,
+  100% {
+    opacity: 0.6;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.14);
+  }
+}
+
+.wave-breathe {
+  animation: waveBreathe 6s ease-in-out infinite;
+}
+
+.wave-group {
+  animation: waveGroupBreath 5s ease-in-out infinite;
+}
+
+html,
+body {
+  cursor: none !important;
+}
+
+button,
+a,
+input,
+textarea,
+select,
+[role="button"],
+[tabindex] {
+  cursor: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sr-hidden {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+  .wave-breathe,
+  .wave-group {
+    animation: none !important;
+  }
+  html,
+  body,
+  button,
+  a,
+  input,
+  textarea,
+  select,
+  [role="button"],
+  [tabindex] {
+    cursor: auto !important;
+  }
+}
