@@ -1,13 +1,25 @@
-import os
-from motor.motor_asyncio import AsyncIOMotorClient
-from dotenv import load_dotenv
+from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCollection
 
-load_dotenv()
+from config import get_settings
 
-MONGO_URI = os.getenv("MONGO_URI")
-DB_NAME = os.getenv("DB_NAME")
-COLLECTION_NAME = os.getenv("COLLECTION_NAME")
 
-client = AsyncIOMotorClient(MONGO_URI)
-db = client[DB_NAME]
-collection = db[COLLECTION_NAME]
+_client: AsyncIOMotorClient | None = None
+
+
+def get_mongo_client() -> AsyncIOMotorClient:
+    global _client
+    if _client is None:
+        _client = AsyncIOMotorClient(get_settings().mongo_uri)
+    return _client
+
+
+def get_collection() -> AsyncIOMotorCollection:
+    settings = get_settings()
+    return get_mongo_client()[settings.db_name][settings.collection_name]
+
+
+def close_database() -> None:
+    global _client
+    if _client is not None:
+        _client.close()
+        _client = None
