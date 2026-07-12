@@ -32,6 +32,15 @@ def finding_fingerprint(finding: dict[str, Any]) -> str:
     return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
 
+def finding_rule_id(finding: dict[str, Any]) -> str:
+    existing = str(finding.get("rule_id") or "").strip()
+    if existing:
+        return existing
+    issue_type = str(finding.get("issue_type") or "unknown")
+    normalized = re.sub(r"[^a-z0-9]+", ".", issue_type.lower()).strip(".")
+    return normalized or "unknown"
+
+
 def deduplicate_findings(findings: list[dict[str, Any]]) -> list[dict[str, Any]]:
     seen: set[str] = set()
     unique: list[dict[str, Any]] = []
@@ -43,6 +52,7 @@ def deduplicate_findings(findings: list[dict[str, Any]]) -> list[dict[str, Any]]
 
         seen.add(fingerprint)
         normalized = dict(finding)
+        normalized["rule_id"] = finding_rule_id(finding)
         normalized["fingerprint"] = fingerprint
         unique.append(normalized)
 

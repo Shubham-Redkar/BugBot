@@ -1,4 +1,3 @@
-import re
 from datetime import datetime
 from typing import Any
 from uuid import UUID
@@ -16,7 +15,7 @@ from db.tables import (
     ScanStatus,
     Severity,
 )
-from services.finding_analysis import finding_fingerprint
+from services.finding_analysis import finding_fingerprint, finding_rule_id
 
 
 def parse_datetime(value: Any) -> datetime | None:
@@ -25,15 +24,6 @@ def parse_datetime(value: Any) -> datetime | None:
     if isinstance(value, str) and value:
         return datetime.fromisoformat(value.replace("Z", "+00:00"))
     return None
-
-
-def normalize_rule_id(finding: dict[str, Any]) -> str:
-    existing = str(finding.get("rule_id") or "").strip()
-    if existing:
-        return existing
-    issue_type = str(finding.get("issue_type") or "unknown")
-    normalized = re.sub(r"[^a-z0-9]+", ".", issue_type.lower()).strip(".")
-    return normalized or "unknown"
 
 
 def build_scan_record(result: dict[str, Any]) -> Scan:
@@ -68,7 +58,7 @@ def build_scan_record(result: dict[str, Any]) -> Scan:
         finding_records.append(
             Finding(
                 page=pages_by_url.get(str(finding.get("page", ""))),
-                rule_id=normalize_rule_id(finding),
+                rule_id=finding_rule_id(finding),
                 issue_type=str(finding.get("issue_type", "Unknown issue")),
                 severity=Severity(severity_value),
                 description=str(finding.get("description", "")),

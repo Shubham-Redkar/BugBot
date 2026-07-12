@@ -21,3 +21,22 @@ async def test_scan_route_returns_client_error_for_unsafe_target(monkeypatch):
 
     assert error.value.status_code == 400
     assert "non-public" in error.value.detail
+
+
+def test_openapi_uses_typed_success_responses():
+    from main import app
+
+    schema = app.openapi()
+    create_response = schema["paths"]["/scan"]["post"]["responses"]["201"]
+    result_response = schema["paths"]["/results/{scan_id}"]["get"]["responses"]["200"]
+    health_response = schema["paths"]["/"]["get"]["responses"]["200"]
+
+    assert create_response["content"]["application/json"]["schema"]["$ref"].endswith(
+        "/CreateScanResponse"
+    )
+    assert result_response["content"]["application/json"]["schema"]["$ref"].endswith(
+        "/ScanResultResponse"
+    )
+    assert health_response["content"]["application/json"]["schema"]["$ref"].endswith(
+        "/HealthResponse"
+    )

@@ -36,6 +36,7 @@ def test_analysis_deduplicates_prioritizes_and_scores_findings():
 
     assert len(result.findings) == 2
     assert result.findings[0]["severity"] == "High"
+    assert result.findings[0]["rule_id"] == "broken.images"
     assert result.summary["high"] == 1
     assert result.summary["low"] == 1
     assert 0 <= result.health_score <= 100

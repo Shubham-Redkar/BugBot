@@ -1,6 +1,6 @@
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 Severity = Literal["Critical", "High", "Medium", "Low", "Unknown"]
@@ -8,6 +8,8 @@ Severity = Literal["Critical", "High", "Medium", "Low", "Unknown"]
 
 class FindingEvidence(BaseModel):
     """Machine-collected evidence supporting a finding."""
+
+    model_config = ConfigDict(extra="allow")
 
     selector: str | None = None
     html: str | None = None

@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from agents.scan_coordinator import run_scan
 from db.postgres import get_db_session
+from models.api_models import CreateScanResponse, HealthResponse, ScanResultResponse
 from models.request_models import ScanRequest
 from repositories.scan_repository import ScanRepository
 from services.url_security import UnsafeUrlError
@@ -18,12 +19,17 @@ router = APIRouter()
 DatabaseSession = Annotated[AsyncSession, Depends(get_db_session)]
 
 
-@router.get("/", tags=["Health"])
+@router.get("/", response_model=HealthResponse, tags=["Health"])
 async def root():
     return {"message": "BugBot API is running"}
 
 
-@router.post("/scan", response_model=dict, status_code=status.HTTP_201_CREATED, tags=["Scan"])
+@router.post(
+    "/scan",
+    response_model=CreateScanResponse,
+    status_code=status.HTTP_201_CREATED,
+    tags=["Scan"],
+)
 async def scan_website(data: ScanRequest, session: DatabaseSession):
     """Run a scan and persist its complete result in PostgreSQL."""
     try:
@@ -49,7 +55,9 @@ async def scan_website(data: ScanRequest, session: DatabaseSession):
         ) from exc
 
 
-@router.get("/results/{scan_id}", response_model=dict, tags=["Results"])
+@router.get(
+    "/results/{scan_id}", response_model=ScanResultResponse, tags=["Results"]
+)
 async def get_results(scan_id: UUID, session: DatabaseSession):
     """Retrieve a persisted scan and all related findings."""
     try:
