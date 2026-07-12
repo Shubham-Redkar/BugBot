@@ -58,9 +58,34 @@ def test_scan_result_response_validates_current_payload_shape():
 
 
 def test_create_scan_response_accepts_uuid_and_typed_result():
-    payload = scan_payload()
-    response = CreateScanResponse.model_validate(
-        {"scan_id": payload["scan_id"], "result": payload}
-    )
+    scan_id = uuid4()
+    response = CreateScanResponse.model_validate({
+        "scan_id": str(scan_id),
+        "status": "pending",
+        "poll_url": f"/results/{scan_id}",
+    })
 
-    assert response.scan_id == response.result.scan_id
+    assert response.scan_id == scan_id
+    assert response.status == "pending"
+
+
+def test_scan_result_response_supports_pending_state():
+    scan_id = uuid4()
+    response = ScanResultResponse.model_validate({
+        "scan_id": str(scan_id),
+        "url": "https://example.com",
+        "target_url": "https://example.com",
+        "status": "pending",
+        "summary": {},
+        "pages_scanned": 0,
+        "pages_failed": 0,
+        "issues_found": 0,
+        "pages": [],
+        "findings": [],
+        "issues": [],
+        "errors": [],
+        "started_at": "2026-07-12T12:00:00+00:00",
+    })
+
+    assert response.health_score is None
+    assert response.health_status is None

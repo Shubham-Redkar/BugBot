@@ -111,7 +111,7 @@ BugBot/
 
 # 🔌 API Endpoints
 
-###  Start Scan
+### Start Scan
 
 POST /scan
 
@@ -119,31 +119,28 @@ POST /scan
 {
   "url": "https://example.com"
 }
-````
+```
 
----
+The endpoint validates the target, creates a persistent job, and returns HTTP 202:
 
-###  Check Status
+```json
+{
+  "scan_id": "d4951b4f-e72c-4072-b66e-ab4f91d64d47",
+  "status": "pending",
+  "poll_url": "/results/d4951b4f-e72c-4072-b66e-ab4f91d64d47"
+}
+```
 
-GET /scan/{scan_id}/status
+### Check Scan Status and Results
 
----
+GET /results/{scan_id}
 
-###  Get Results
+The response status progresses through `pending`, `running`, and then a terminal
+state: `completed`, `completed_with_errors`, or `failed`.
 
-GET /scan/{scan_id}/results
+### Health
 
----
-
-###  Filter Issues
-
-GET /scan/{scan_id}/issues?severity=high
-
----
-
-###  Download Report
-
-GET /scan/{scan_id}/download
+GET /
 
 ---
 

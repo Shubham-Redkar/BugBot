@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from uuid import UUID
 
 from agents.report_agent import enrich_findings
 from models.scan_models import ScanContext, ScanError
@@ -13,9 +14,10 @@ def utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-async def run_scan(url: str) -> dict:
+async def run_scan(url: str, scan_id: UUID | None = None) -> dict:
     """Coordinate deterministic scanning, analysis, and AI enrichment."""
-    context = ScanContext(target_url=url, status="running")
+    context_args = {"scan_id": scan_id} if scan_id is not None else {}
+    context = ScanContext(target_url=url, status="running", **context_args)
 
     try:
         raw_result = await test_website(url)

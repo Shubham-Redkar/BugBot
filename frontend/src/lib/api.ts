@@ -9,6 +9,8 @@ import type {
 export const API_BASE_URL = (
   import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000"
 ).replace(/\/$/, "");
+const POLL_INTERVAL_MS = 1_500;
+const SCAN_TIMEOUT_MS = 10 * 60 * 1_000;
 
 function asRecord(value: unknown): Record<string, unknown> {
   return value !== null && typeof value === "object"
@@ -123,6 +125,54 @@ async function errorMessage(response: Response): Promise<string> {
   }
 }
 
+function wait(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new DOMException("The request was aborted", "AbortError"));
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    const onAbort = () => {
+      window.clearTimeout(timer);
+      reject(new DOMException("The request was aborted", "AbortError"));
+    };
+    signal?.addEventListener("abort", onAbort, { once: true });
+  });
+}
+
+async function pollScan(
+  pollUrl: string,
+  signal?: AbortSignal,
+): Promise<ScanResult> {
+  const endpoint = pollUrl.startsWith("http")
+    ? pollUrl
+    : `${API_BASE_URL}${pollUrl.startsWith("/") ? "" : "/"}${pollUrl}`;
+  const deadline = Date.now() + SCAN_TIMEOUT_MS;
+
+  while (Date.now() < deadline) {
+    const response = await fetch(endpoint, { signal });
+    if (!response.ok) {
+      throw Object.assign(new Error(await errorMessage(response)), {
+        status: response.status,
+      });
+    }
+
+    const result = parseScanResult(await response.json());
+    if (result.status === "completed" || result.status === "completed_with_errors") {
+      return result;
+    }
+    if (result.status === "failed") {
+      throw new Error(result.errors[0]?.message ?? "The scan job failed.");
+    }
+    await wait(POLL_INTERVAL_MS, signal);
+  }
+
+  throw new Error("The scan did not finish within ten minutes.");
+}
+
 export async function getHealth(signal?: AbortSignal): Promise<void> {
   const response = await fetch(`${API_BASE_URL}/`, { signal });
   if (!response.ok) throw new Error(await errorMessage(response));
@@ -144,5 +194,12 @@ export async function scanWebsite(
     throw Object.assign(new Error(message), { status: response.status });
   }
 
-  return parseScanResult(await response.json());
+  const payload = await response.json();
+  const envelope = asRecord(payload);
+  if (envelope.result) return parseScanResult(payload);
+
+  const scanId = asString(envelope.scan_id);
+  const pollUrl = asString(envelope.poll_url, `/results/${scanId}`);
+  if (!scanId) throw new Error("The API did not return a scan ID.");
+  return pollScan(pollUrl, signal);
 }

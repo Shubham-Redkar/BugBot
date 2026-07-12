@@ -1,9 +1,9 @@
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from .finding_models import Finding
-from .scan_models import ScanResult
+from .scan_models import ScanResult, ScanStatus
 
 
 class HealthResponse(BaseModel):
@@ -14,9 +14,12 @@ class ScanResultResponse(ScanResult):
     """Public scan representation with temporary legacy compatibility fields."""
 
     url: str
-    issues: list[Finding]
+    health_score: int | None = None
+    health_status: str | None = None
+    issues: list[Finding] = Field(default_factory=list)
 
 
 class CreateScanResponse(BaseModel):
     scan_id: UUID
-    result: ScanResultResponse
+    status: ScanStatus
+    poll_url: str

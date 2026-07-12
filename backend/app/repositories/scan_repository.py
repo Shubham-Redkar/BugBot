@@ -1,8 +1,8 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
-from sqlalchemy import select
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -177,6 +177,55 @@ class ScanRepository:
         async with self.session.begin():
             self.session.add(scan)
         return scan.id
+
+    async def create_pending(self, target_url: str) -> UUID:
+        scan = Scan(
+            id=uuid4(),
+            target_url=target_url,
+            status=ScanStatus.PENDING,
+            summary={},
+            pages_discovered=0,
+            pages_scanned=0,
+            pages_failed=0,
+            issues_found=0,
+            started_at=datetime.now(timezone.utc),
+        )
+        async with self.session.begin():
+            self.session.add(scan)
+        return scan.id
+
+    async def mark_running(self, scan_id: UUID) -> None:
+        async with self.session.begin():
+            await self.session.execute(
+                update(Scan)
+                .where(Scan.id == scan_id)
+                .values(status=ScanStatus.RUNNING)
+            )
+
+    async def replace_with_result(self, result: dict[str, Any]) -> None:
+        scan = build_scan_record(result)
+        async with self.session.begin():
+            await self.session.execute(
+                delete(Scan)
+                .where(Scan.id == scan.id)
+                .execution_options(synchronize_session=False)
+            )
+            await self.session.flush()
+            self.session.add(scan)
+
+    async def mark_failed(self, scan_id: UUID, message: str) -> None:
+        async with self.session.begin():
+            await self.session.execute(
+                update(Scan)
+                .where(Scan.id == scan_id)
+                .values(
+                    status=ScanStatus.FAILED,
+                    completed_at=datetime.now(timezone.utc),
+                )
+            )
+            self.session.add(
+                ScanError(scan_id=scan_id, stage="scan", message=message)
+            )
 
     async def get(self, scan_id: UUID) -> dict[str, Any] | None:
         statement = (

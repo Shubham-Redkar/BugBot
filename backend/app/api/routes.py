@@ -2,16 +2,16 @@ import logging
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from agents.scan_coordinator import run_scan
 from db.postgres import get_db_session
 from models.api_models import CreateScanResponse, HealthResponse, ScanResultResponse
 from models.request_models import ScanRequest
 from repositories.scan_repository import ScanRepository
-from services.url_security import UnsafeUrlError
+from services.scan_jobs import execute_scan_job
+from services.url_security import UnsafeUrlError, UrlSafetyValidator
 
 
 logger = logging.getLogger(__name__)
@@ -27,15 +27,25 @@ async def root():
 @router.post(
     "/scan",
     response_model=CreateScanResponse,
-    status_code=status.HTTP_201_CREATED,
+    status_code=status.HTTP_202_ACCEPTED,
     tags=["Scan"],
 )
-async def scan_website(data: ScanRequest, session: DatabaseSession):
-    """Run a scan and persist its complete result in PostgreSQL."""
+async def scan_website(
+    data: ScanRequest,
+    background_tasks: BackgroundTasks,
+    session: DatabaseSession,
+):
+    """Create a persistent scan job and return before browser work begins."""
     try:
-        result = await run_scan(str(data.url))
-        scan_id = await ScanRepository(session).create(result)
-        return {"scan_id": str(scan_id), "result": result}
+        target_url = str(data.url)
+        await UrlSafetyValidator().validate(target_url)
+        scan_id = await ScanRepository(session).create_pending(target_url)
+        background_tasks.add_task(execute_scan_job, scan_id, target_url)
+        return {
+            "scan_id": str(scan_id),
+            "status": "pending",
+            "poll_url": f"/results/{scan_id}",
+        }
     except UnsafeUrlError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -45,13 +55,13 @@ async def scan_website(data: ScanRequest, session: DatabaseSession):
         logger.exception("Failed to persist scan result", exc_info=exc)
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Scan completed but could not be persisted.",
+            detail="The scan job could not be created.",
         ) from exc
     except Exception as exc:
-        logger.exception("Website scan failed", exc_info=exc)
+        logger.exception("Scan job creation failed", exc_info=exc)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="The website scan could not be completed.",
+            detail="The scan job could not be created.",
         ) from exc
 
 
