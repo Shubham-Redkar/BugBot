@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Any, Optional, List, Dict
+from typing import Any, Optional, Dict
 
 
 class IssueModel(BaseModel):
@@ -12,13 +12,3 @@ class IssueModel(BaseModel):
     impact: str = ""
     fix_suggestion: str = ""
     evidence: Dict[str, Any] = Field(default_factory=dict)
-
-
-class ScanResultModel(BaseModel):
-    url: str
-    pages_scanned: int
-    issues_found: int
-    health_score: int
-    health_status: str
-    summary: Dict[str, int]
-    issues: List[IssueModel]

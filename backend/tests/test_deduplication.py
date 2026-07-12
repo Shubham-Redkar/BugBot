@@ -1,18 +1,20 @@
-from agents.testing_agent import deduplicate_issues as pipeline_deduplicate
-from services.playwright_service import deduplicate_issues as scanner_deduplicate
+from services.finding_analysis import deduplicate_findings, finding_fingerprint
 
 
-def test_pipeline_deduplication_removes_exact_duplicates():
+def test_deduplication_removes_exact_duplicates():
     base = {
         "page": "https://example.com",
         "issue_type": "Missing Page Title",
         "description": "Page has no title.",
     }
 
-    assert pipeline_deduplicate([base, base.copy()]) == [base]
+    result = deduplicate_findings([base, base.copy()])
+
+    assert len(result) == 1
+    assert result[0]["fingerprint"] == finding_fingerprint(base)
 
 
-def test_pipeline_deduplication_keeps_different_descriptions():
+def test_deduplication_keeps_different_descriptions():
     first = {
         "page": "https://example.com",
         "issue_type": "Console JavaScript Error",
@@ -20,17 +22,21 @@ def test_pipeline_deduplication_keeps_different_descriptions():
     }
     second = {**first, "description": "TypeError"}
 
-    assert pipeline_deduplicate([first, second]) == [first, second]
+    result = deduplicate_findings([first, second])
+
+    assert [finding["description"] for finding in result] == [
+        "ReferenceError",
+        "TypeError",
+    ]
 
 
-def test_scanner_deduplication_documents_current_page_type_behavior():
+def test_deduplication_keeps_different_console_evidence():
     first = {
         "page": "https://example.com",
         "issue_type": "Console JavaScript Error",
-        "description": "ReferenceError",
+        "description": "Console errors detected",
+        "evidence": {"console_message": "ReferenceError"},
     }
-    second = {**first, "description": "TypeError"}
+    second = {**first, "evidence": {"console_message": "TypeError"}}
 
-    # This captures the existing behavior. A later analysis refactor can change it
-    # deliberately alongside this regression test.
-    assert scanner_deduplicate([first, second]) == [first]
+    assert len(deduplicate_findings([first, second])) == 2

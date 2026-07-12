@@ -1,11 +1,17 @@
-from services.playwright_service import calculate_health_score, extract_count
+from services.finding_analysis import calculate_health_score, extract_count
 
 
 def test_empty_scan_has_perfect_health_score():
     score, summary, status = calculate_health_score([], pages_scanned=1)
 
     assert score == 100
-    assert summary == {"high": 0, "medium": 0, "low": 0}
+    assert summary == {
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 0,
+        "unknown": 0,
+    }
     assert status == "Excellent"
 
 
@@ -31,7 +37,13 @@ def test_health_score_counts_severities_and_stays_in_range():
     score, summary, status = calculate_health_score(issues, pages_scanned=2)
 
     assert 0 <= score <= 100
-    assert summary == {"high": 1, "medium": 1, "low": 1}
+    assert summary == {
+        "critical": 0,
+        "high": 1,
+        "medium": 1,
+        "low": 1,
+        "unknown": 0,
+    }
     assert status in {"Excellent", "Good", "Fair", "Poor"}
 
 

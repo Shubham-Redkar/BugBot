@@ -1,4 +1,3 @@
-import re
 import asyncio
 import time
 from dataclasses import dataclass, field
@@ -10,7 +9,7 @@ from playwright.async_api import (
 )
 from utils.helpers import clean_links
 from services.screenshot_service import get_screenshot_path
-from models.response_models import ScanResultModel, IssueModel
+from models.response_models import IssueModel
 from utils.constants import MAX_PAGES, HEADLESS
 
 SCAN_TIMEOUT_SECONDS = 120
@@ -45,77 +44,6 @@ async def _crawl(start_url: str) -> list[str]:
             await browser.close()
 
     return [start_url] + discovered[: MAX_PAGES - 1]
-
-
-def deduplicate_issues(issues: list[dict]) -> list[dict]:
-    seen = set()
-    unique = []
-
-    for issue in issues:
-        key = (issue.get("page"), issue.get("issue_type"))
-        if key not in seen:
-            seen.add(key)
-            unique.append(issue)
-
-    return unique
-
-
-def extract_count(description: str) -> int:
-    match = re.search(r"(\d+)", description or "")
-    return int(match.group(1)) if match else 1
-
-
-def calculate_health_score(issues: list[dict], pages_scanned: int):
-    summary = {"high": 0, "medium": 0, "low": 0}
-    total_penalty = 0
-
-    high_priority = {
-        "Required Field Validation",
-        "Email Validation Check",
-        "Insecure Form Submission",
-        "Broken Images",
-        "Console JavaScript Error",
-        "Broken Page",
-        "Page Load Failure",
-    }
-
-    medium_priority = {
-        "Password Validation Check",
-        "Missing Form Labels",
-        "Missing Alt Text",
-        "Missing Page Title",
-        "Empty Buttons",
-        "Empty Links",
-    }
-
-    for issue in issues:
-        severity = issue.get("severity", "").lower()
-        issue_type = issue.get("issue_type", "")
-        count = extract_count(issue.get("description", ""))
-
-        count_factor = min(count, 10)
-        high_bonus = 2 if issue_type in high_priority else 0
-        medium_bonus = 1 if issue_type in medium_priority else 0
-
-        if severity == "high":
-            summary["high"] += 1
-            total_penalty += 12 + count_factor + high_bonus
-        elif severity == "medium":
-            summary["medium"] += 1
-            total_penalty += 5 + (count_factor * 0.5) + medium_bonus
-        else:
-            summary["low"] += 1
-            total_penalty += 2 + (count_factor * 0.2)
-
-    score = int(max(0, 100 - (total_penalty / max(pages_scanned, 1))))
-
-    status = (
-        "Excellent"
-        if score >= 90
-        else "Good" if score >= 75 else "Fair" if score >= 55 else "Poor"
-    )
-
-    return score, summary, status
 
 
 async def _check_required_field_validation(page, form, url, idx, issues):
@@ -642,20 +570,14 @@ async def _test(start_url: str):
 
     scan_duration = round(time.monotonic() - scan_start_time, 2)
 
-    issues = deduplicate_issues(issues)
-    score, summary, status = calculate_health_score(issues, len(pages))
-
-    return ScanResultModel(
-        url=start_url,
-        pages_scanned=len(pages),
-        issues_found=len(issues),
-        health_score=score,
-        health_status=status,
-        summary=summary,
-        issues=issues,
-        scanned_at=scan_started_at,
-        scan_duration_seconds=scan_duration,
-    ).model_dump()
+    return {
+        "url": start_url,
+        "pages_scanned": len(pages),
+        "issues": issues,
+        "scanned_at": scan_started_at,
+        "scan_duration_seconds": scan_duration,
+        "errors": [],
+    }
 
 
 async def test_website(start_url: str):

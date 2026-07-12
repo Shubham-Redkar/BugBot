@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from models.request_models import ScanRequest
-from agents.testing_agent import run_full_scan
+from agents.scan_coordinator import run_scan
 from services.mongo_service import save_scan_result, get_scan_result
 from bson import ObjectId
 from datetime import datetime
@@ -46,7 +46,7 @@ async def scan_website(data: ScanRequest):
     Scan a website, enrich issues, save to MongoDB.
     """
     try:
-        result = await run_full_scan(str(data.url))
+        result = await run_scan(str(data.url))
 
         # Serialize before saving/returning
         safe_result = serialize_mongo_doc(result)
