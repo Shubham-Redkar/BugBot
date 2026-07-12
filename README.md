@@ -229,6 +229,43 @@ Open in browser:
 
 [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 
+## Docker Compose
+
+Set `GROQ_API_KEY` in `backend/.env`, then build and start the complete stack:
+
+```bash
+docker compose up --build
+```
+
+Compose starts:
+
+- Frontend: <http://localhost:5173>
+- API and OpenAPI docs: <http://localhost:8000/docs>
+- Celery worker on the dedicated `scans` queue
+- PostgreSQL with persistent storage
+- Redis with append-only persistence
+- A one-time Alembic migration service
+
+Follow API and worker logs:
+
+```bash
+docker compose logs --follow api worker
+```
+
+Stop containers while retaining PostgreSQL, Redis, and screenshots:
+
+```bash
+docker compose down
+```
+
+Remove containers and all development volumes:
+
+```bash
+docker compose down --volumes
+```
+
+The final command permanently removes local database and scan data.
+
 ---
 
 #  Example Output

@@ -16,6 +16,7 @@ from db.tables import (
     Severity,
 )
 from services.finding_analysis import finding_fingerprint, finding_rule_id
+from services.screenshot_service import get_screenshot_url
 
 
 def parse_datetime(value: Any) -> datetime | None:
@@ -128,7 +129,7 @@ def scan_to_dict(scan: Scan) -> dict[str, Any]:
             "severity": finding.severity.value.title(),
             "description": finding.description,
             "evidence": finding.evidence,
-            "screenshot": finding.screenshot_path,
+            "screenshot": get_screenshot_url(finding.screenshot_path),
             "explanation": finding.explanation,
             "impact": finding.impact,
             "fix_suggestion": finding.fix_suggestion,

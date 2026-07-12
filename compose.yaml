@@ -1,0 +1,111 @@
+name: bugbot
+
+x-backend-environment: &backend-environment
+  DATABASE_URL: postgresql+asyncpg://bugbot:${POSTGRES_PASSWORD:-bugbot}@postgres:5432/bugbot
+  CELERY_BROKER_URL: redis://redis:6379/0
+  SCREENSHOT_DIR: /app/app/screenshots
+  CORS_ORIGINS: '["http://localhost:5173"]'
+  HEADLESS: "true"
+
+x-backend-service: &backend-service
+  image: bugbot-backend:local
+  build:
+    context: ./backend
+  env_file:
+    - path: ./backend/.env
+      required: false
+  environment: *backend-environment
+  restart: unless-stopped
+  init: true
+  security_opt:
+    - no-new-privileges:true
+  volumes:
+    - screenshots:/app/app/screenshots
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: bugbot
+      POSTGRES_USER: bugbot
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-bugbot}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bugbot -d bugbot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  migrate:
+    <<: *backend-service
+    command: ["alembic", "upgrade", "head"]
+    working_dir: /app
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    <<: *backend-service
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  worker:
+    <<: *backend-service
+    command:
+      - celery
+      - -A
+      - celery_app.celery_app
+      - worker
+      - --loglevel=INFO
+      - --queues=scans
+      - --concurrency=2
+    shm_size: 1gb
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  frontend:
+    image: bugbot-frontend:local
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: http://localhost:8000
+    ports:
+      - "5173:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  postgres-data:
+  redis-data:
+  screenshots:

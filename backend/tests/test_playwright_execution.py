@@ -4,7 +4,7 @@ import pytest
 
 from services import playwright_service
 from services.playwright_service import PageScanResult, _scan_pages_with_timeout
-from services.screenshot_service import get_screenshot_path
+from services.screenshot_service import get_screenshot_path, get_screenshot_url
 
 
 def test_screenshot_paths_are_unique_even_with_same_prefix_and_index():
@@ -32,6 +32,12 @@ def test_page_result_exposes_relational_metadata():
         "duration_ms": 45,
         "error": None,
     }
+
+
+def test_screenshot_filesystem_path_becomes_public_api_path():
+    assert get_screenshot_url("/app/app/screenshots/finding.png") == (
+        "/screenshots/finding.png"
+    )
 
 
 @pytest.mark.asyncio
