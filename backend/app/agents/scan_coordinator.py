@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from agents.explainer_agent import explain_all_issues
+from agents.report_agent import enrich_findings
 from models.scan_models import ScanContext, ScanError
 from services.finding_analysis import analyze_findings
 from services.playwright_service import test_website
@@ -22,7 +22,7 @@ async def run_scan(url: str) -> dict:
         pages_scanned = int(raw_result.get("pages_scanned", 0))
         analysis = analyze_findings(raw_result.get("issues", []), pages_scanned)
         try:
-            findings = await explain_all_issues(analysis.findings)
+            findings = await enrich_findings(analysis.findings)
         except Exception as exc:
             findings = analysis.findings
             context.errors.append(

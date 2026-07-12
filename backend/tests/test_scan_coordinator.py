@@ -30,7 +30,7 @@ async def test_coordinator_returns_legacy_and_new_finding_fields(monkeypatch):
         return findings
 
     monkeypatch.setattr(scan_coordinator, "test_website", fake_test_website)
-    monkeypatch.setattr(scan_coordinator, "explain_all_issues", fake_explain)
+    monkeypatch.setattr(scan_coordinator, "enrich_findings", fake_explain)
 
     result = await scan_coordinator.run_scan("https://example.com")
 
@@ -52,7 +52,7 @@ async def test_explanation_failure_preserves_deterministic_findings(monkeypatch)
 
     monkeypatch.setattr(scan_coordinator, "test_website", fake_test_website)
     monkeypatch.setattr(
-        scan_coordinator, "explain_all_issues", failed_explanation
+        scan_coordinator, "enrich_findings", failed_explanation
     )
 
     result = await scan_coordinator.run_scan("https://example.com")
@@ -81,7 +81,7 @@ async def test_page_failure_sets_partial_status(monkeypatch):
         return findings
 
     monkeypatch.setattr(scan_coordinator, "test_website", fake_test_website)
-    monkeypatch.setattr(scan_coordinator, "explain_all_issues", fake_explain)
+    monkeypatch.setattr(scan_coordinator, "enrich_findings", fake_explain)
 
     result = await scan_coordinator.run_scan("https://example.com")
 
