@@ -106,6 +106,10 @@ coverage/
 playwright-report/
 test-results/
 
+# Runtime scan evidence
+backend/app/screenshots/*
+!backend/app/screenshots/.gitkeep
+
 __pycache__
 
 frontend\eslint.config.js

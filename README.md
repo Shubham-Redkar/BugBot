@@ -69,113 +69,43 @@ Structured Report Output
 - Alembic migrations
 
 ### Utilities
-- Pydantic  
-- Python-dotenv  
+- Pydantic and pydantic-settings
+- Pytest
 
 ---
 
 #  Project Structure
 
-```
-
+```text
 BugBot/
-│
 ├── backend/
+│   ├── alembic/                 # PostgreSQL migrations
 │   ├── app/
-│   │   ├── __pycache__/
-│   │   │
 │   │   ├── agents/
-│   │   │   ├── __pycache__/
-│   │   │   ├── __init__.py
-│   │   │   ├── crawler_agent.py
-│   │   │   ├── explainer_agent.py
-│   │   │   └── testing_agent.py
-│   │   │
-│   │   ├── api/
-│   │   │   ├── __pycache__/
-│   │   │   ├── __init__.py
-│   │   │   └── routes.py
-│   │   │
-│   │   ├── db/
-│   │   │   ├── __pycache__/
-│   │   │   └── database.py
-│   │   │
-│   │   ├── models/
-│   │   │   ├── __pycache__/
-│   │   │   ├── __init__.py
-│   │   │   ├── request_models.py
-│   │   │   └── response_models.py
-│   │   │
-│   │   ├── screenshots/
-│   │   ├── services/
-│   │   ├── utils/
-│   │   ├── __init__.py
-│   │   ├── main.py
-│   │   ├── run.py
-│   │   └── tp.py
-│   │
-│   ├── .env
+│   │   │   ├── report_agent.py
+│   │   │   └── scan_coordinator.py
+│   │   ├── api/routes.py
+│   │   ├── db/                  # SQLAlchemy models and async sessions
+│   │   ├── models/              # API and scan data contracts
+│   │   ├── repositories/        # PostgreSQL persistence
+│   │   ├── services/            # Browser, analysis, LLM, screenshots
+│   │   ├── config.py            # Typed application settings
+│   │   └── main.py
+│   ├── tests/
+│   ├── .env.example
+│   ├── alembic.ini
 │   └── requirements.txt
-│
 ├── frontend/
-│   ├── node_modules/
-│   │
 │   ├── src/
 │   │   ├── components/
-│   │   │   ├── layout/
-│   │   │   ├── pages/
-│   │   │   └── ui/
-│   │   │       ├── AnimatedCounter.tsx
-│   │   │       ├── CursorReticle.tsx
-│   │   │       ├── ErrorOverlay.tsx
-│   │   │       ├── HeatMap.tsx
-│   │   │       ├── HUDScaffolding.tsx
-│   │   │       ├── IssueCard.tsx
-│   │   │       ├── KineticHeading.tsx
-│   │   │       ├── MagneticCursor.tsx
-│   │   │       ├── NeuralMesh.tsx
-│   │   │       └── ResultsLoader.tsx
-│   │   │
-│   │   ├── hooks/
-│   │   │   ├── useScanner.ts
-│   │   │   ├── useScrollReveal.ts
-│   │   │   ├── useSmoothScroll.ts
-│   │   │   └── useSystemStatus.ts
-│   │   │
-│   │   ├── lib/
-│   │   │   ├── api.ts
-│   │   │   ├── constants.ts
-│   │   │   └── reports.ts
-│   │   │
-│   │   ├── types/
-│   │   │   ├── index.ts
-│   │   │   └── types.patch.ts
-│   │   │
-│   │   ├── animations.css
+│   │   ├── hooks/useScanner.ts
+│   │   ├── lib/api.ts
+│   │   ├── types/index.ts
 │   │   ├── App.tsx
-│   │   ├── index.css
-│   │   └── main.tsx
-│   │
-│   ├── .env
-│   ├── .gitignore
-│   ├── eslint.config.js
-│   ├── index.html
-│   ├── package-lock.json
-│   ├── package.json
-│   ├── README.md
-│   ├── tsconfig.app.json
-│   ├── tsconfig.json
-│   ├── tsconfig.node.json
-│   ├── vite.config.ts
-│   │
-│   ├── node_modules/
-│   ├── screenshots/
-│   ├── .gitignore
-│   ├── package-lock.json
+│   │   └── index.css
 │   └── package.json
-│
-└── README.md (optional root)
-````
+└── README.md
+```
 
 ---
 
@@ -246,8 +176,10 @@ BugBot uses LLMs to generate:
 ```bash
 git clone <https://github.com/Shubham-Redkar/BugBot>
 cd BugBot/backend
-
-pip install -r requirements.txt
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements-dev.txt
+playwright install chromium
 ```
 
 ---
@@ -266,6 +198,7 @@ DATABASE_URL=postgresql+asyncpg://bugbot:bugbot@localhost:5432/bugbot
 #  Run the Project
 
 ```bash
+alembic upgrade head
 uvicorn app.main:app --reload
 ```
 
