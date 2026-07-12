@@ -30,11 +30,17 @@ async def run_scan(url: str) -> dict:
             )
 
         failed_pages = {
-            finding.get("page")
-            for finding in findings
-            if finding.get("issue_type") in FAILURE_ISSUE_TYPES
-            and finding.get("page")
+            page.get("url")
+            for page in raw_result.get("pages", [])
+            if page.get("status") in {"failed", "timed_out"} and page.get("url")
         }
+        if not failed_pages:
+            failed_pages = {
+                finding.get("page")
+                for finding in findings
+                if finding.get("issue_type") in FAILURE_ISSUE_TYPES
+                and finding.get("page")
+            }
         raw_errors = raw_result.get("errors", [])
         context.errors.extend(
             ScanError.model_validate(error)

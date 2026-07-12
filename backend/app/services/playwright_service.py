@@ -7,12 +7,10 @@ from playwright.async_api import (
     async_playwright,
     TimeoutError as PlaywrightTimeoutError,
 )
+from config import get_settings
 from utils.helpers import clean_links
 from services.screenshot_service import get_screenshot_path
 from models.response_models import IssueModel
-from utils.constants import MAX_PAGES, HEADLESS
-
-SCAN_TIMEOUT_SECONDS = 120
 
 
 @dataclass
@@ -21,13 +19,28 @@ class PageScanResult:
     title: str = ""
     issues: list[dict] = field(default_factory=list)
     timed_out: bool = False
+    http_status: int | None = None
+    duration_ms: int | None = None
+    error: str | None = None
+
+    def as_dict(self) -> dict:
+        status = "timed_out" if self.timed_out else "failed" if self.error else "scanned"
+        return {
+            "url": self.url,
+            "status": status,
+            "title": self.title or None,
+            "http_status": self.http_status,
+            "duration_ms": self.duration_ms,
+            "error": self.error,
+        }
 
 
 async def _crawl(start_url: str) -> list[str]:
+    settings = get_settings()
     discovered = []
 
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=HEADLESS)
+        browser = await p.chromium.launch(headless=settings.headless)
         page = await browser.new_page()
 
         try:
@@ -43,7 +56,7 @@ async def _crawl(start_url: str) -> list[str]:
         finally:
             await browser.close()
 
-    return [start_url] + discovered[: MAX_PAGES - 1]
+    return [start_url] + discovered[: settings.max_pages - 1]
 
 
 async def _check_required_field_validation(page, form, url, idx, issues):
@@ -413,6 +426,7 @@ async def _scan_page(context, url: str, idx: int) -> PageScanResult:
     Each page owns its own list — no shared mutable state across concurrent scans.
     """
     result = PageScanResult(url=url)
+    started_at = time.monotonic()
     page = await context.new_page()
 
     console_errors: list[str] = []
@@ -424,6 +438,7 @@ async def _scan_page(context, url: str, idx: int) -> PageScanResult:
 
     try:
         res = await page.goto(url, wait_until="load", timeout=15000)
+        result.http_status = res.status if res else None
         await page.wait_for_timeout(1500)
         result.title = await page.title()
 
@@ -446,6 +461,7 @@ async def _scan_page(context, url: str, idx: int) -> PageScanResult:
 
     except PlaywrightTimeoutError:
         result.timed_out = True
+        result.error = "Page load timeout"
         result.issues.append(
             IssueModel(
                 page=url,
@@ -456,9 +472,11 @@ async def _scan_page(context, url: str, idx: int) -> PageScanResult:
         )
 
     except Exception as e:
+        result.error = str(e)
         print(f"[playwright] Unexpected error on {url}: {e}")
 
     finally:
+        result.duration_ms = round((time.monotonic() - started_at) * 1000)
         await page.close()
 
     return result
@@ -495,9 +513,11 @@ def _check_duplicate_titles(page_titles: dict[str, str]) -> list[dict]:
 
 
 async def _scan_pages_with_timeout(
-    context, pages: list[str], timeout: float = SCAN_TIMEOUT_SECONDS
+    context, pages: list[str], timeout: float | None = None
 ) -> list[PageScanResult]:
     """Scan pages concurrently while retaining every result completed on time."""
+    if timeout is None:
+        timeout = get_settings().scan_timeout_seconds
     tasks = [
         asyncio.create_task(_scan_page(context, url, idx))
         for idx, url in enumerate(pages)
@@ -514,6 +534,7 @@ async def _scan_pages_with_timeout(
         except Exception as exc:
             results_by_index[idx] = PageScanResult(
                 url=pages[idx],
+                error=str(exc),
                 issues=[
                     IssueModel(
                         page=pages[idx],
@@ -534,6 +555,7 @@ async def _scan_pages_with_timeout(
             results_by_index[idx] = PageScanResult(
                 url=pages[idx],
                 timed_out=True,
+                error="Global scan timeout",
                 issues=[
                     IssueModel(
                         page=pages[idx],
@@ -548,18 +570,19 @@ async def _scan_pages_with_timeout(
 
 
 async def _test(start_url: str):
+    settings = get_settings()
     scan_started_at = datetime.now(timezone.utc).isoformat()
     scan_start_time = time.monotonic()
 
     pages = await _crawl(start_url)
 
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=HEADLESS)
+        browser = await p.chromium.launch(headless=settings.headless)
         context = await browser.new_context()
 
         try:
             page_results = await _scan_pages_with_timeout(
-                context, pages, SCAN_TIMEOUT_SECONDS
+                context, pages, settings.scan_timeout_seconds
             )
         finally:
             await browser.close()
@@ -573,6 +596,7 @@ async def _test(start_url: str):
     return {
         "url": start_url,
         "pages_scanned": len(pages),
+        "pages": [result.as_dict() for result in page_results],
         "issues": issues,
         "scanned_at": scan_started_at,
         "scan_duration_seconds": scan_duration,

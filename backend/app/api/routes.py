@@ -1,38 +1,20 @@
-from fastapi import APIRouter, HTTPException
-from models.request_models import ScanRequest
+import logging
+from typing import Annotated
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from agents.scan_coordinator import run_scan
-from services.mongo_service import save_scan_result, get_scan_result
-from bson import ObjectId
-from datetime import datetime
+from db.postgres import get_db_session
+from models.request_models import ScanRequest
+from repositories.scan_repository import ScanRepository
 
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
-
-
-def serialize_mongo_doc(data):
-    """
-    Recursively convert non-JSON-serializable Mongo/Python types
-    into FastAPI-safe values.
-    """
-    if isinstance(data, list):
-        return [serialize_mongo_doc(item) for item in data]
-
-    if isinstance(data, dict):
-        return {
-            key: serialize_mongo_doc(value)
-            for key, value in data.items()
-        }
-
-    if isinstance(data, ObjectId):
-        return str(data)
-
-    if isinstance(data, datetime):
-        return data.isoformat()
-
-    if isinstance(data, set):
-        return list(data)
-
-    return data
+DatabaseSession = Annotated[AsyncSession, Depends(get_db_session)]
 
 
 @router.get("/", tags=["Health"])
@@ -40,36 +22,42 @@ async def root():
     return {"message": "BugBot API is running"}
 
 
-@router.post("/scan", response_model=dict, tags=["Scan"])
-async def scan_website(data: ScanRequest):
-    """
-    Scan a website, enrich issues, save to MongoDB.
-    """
+@router.post("/scan", response_model=dict, status_code=status.HTTP_201_CREATED, tags=["Scan"])
+async def scan_website(data: ScanRequest, session: DatabaseSession):
+    """Run a scan and persist its complete result in PostgreSQL."""
     try:
         result = await run_scan(str(data.url))
-
-        # Serialize before saving/returning
-        safe_result = serialize_mongo_doc(result)
-
-        scan_id = await save_scan_result(safe_result)
-
-        return {
-            "scan_id": scan_id,
-            "result": safe_result
-        }
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        scan_id = await ScanRepository(session).create(result)
+        return {"scan_id": str(scan_id), "result": result}
+    except SQLAlchemyError as exc:
+        logger.exception("Failed to persist scan result", exc_info=exc)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Scan completed but could not be persisted.",
+        ) from exc
+    except Exception as exc:
+        logger.exception("Website scan failed", exc_info=exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="The website scan could not be completed.",
+        ) from exc
 
 
 @router.get("/results/{scan_id}", response_model=dict, tags=["Results"])
-async def get_results(scan_id: str):
-    """
-    Retrieve a saved scan result by ID.
-    """
-    result = await get_scan_result(scan_id)
+async def get_results(scan_id: UUID, session: DatabaseSession):
+    """Retrieve a persisted scan and all related findings."""
+    try:
+        result = await ScanRepository(session).get(scan_id)
+    except SQLAlchemyError as exc:
+        logger.exception("Failed to retrieve scan result", exc_info=exc)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Scan results are temporarily unavailable.",
+        ) from exc
 
-    if not result:
-        raise HTTPException(status_code=404, detail="Scan result not found")
-
-    return serialize_mongo_doc(result)
+    if result is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Scan result not found",
+        )
+    return result

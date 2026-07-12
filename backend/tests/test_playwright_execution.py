@@ -16,6 +16,24 @@ def test_screenshot_paths_are_unique_even_with_same_prefix_and_index():
     assert second.endswith(".png")
 
 
+def test_page_result_exposes_relational_metadata():
+    result = PageScanResult(
+        url="https://example.com",
+        title="Example",
+        http_status=200,
+        duration_ms=45,
+    )
+
+    assert result.as_dict() == {
+        "url": "https://example.com",
+        "status": "scanned",
+        "title": "Example",
+        "http_status": 200,
+        "duration_ms": 45,
+        "error": None,
+    }
+
+
 @pytest.mark.asyncio
 async def test_global_timeout_preserves_completed_page_results(monkeypatch):
     async def fake_scan_page(_context, url, _idx):
