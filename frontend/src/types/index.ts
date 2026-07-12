@@ -1,56 +1,69 @@
 export type Phase = "home" | "scanning" | "results";
-export type Severity = "High" | "Medium" | "Low";
-export type DlState = "idle" | "generating" | "done";
-export type Filter = "All" | Severity;
+export type Severity = "Critical" | "High" | "Medium" | "Low" | "Unknown";
+export type SystemStatus = "checking" | "online" | "offline";
+export type ScanStatus =
+  | "pending"
+  | "running"
+  | "completed"
+  | "completed_with_errors"
+  | "failed";
 
-export interface Issue {
+export interface FindingEvidence {
+  selector?: string | null;
+  resource_url?: string | null;
+  console_message?: string | null;
+  http_status?: number | null;
+  details?: Record<string, unknown>;
+}
+
+export interface Finding {
+  rule_id?: string;
   page: string;
   issue_type: string;
   severity: Severity;
   description: string;
-  explanation: string;
-  impact: string;
-  fix_suggestion: string;
+  explanation?: string;
+  impact?: string;
+  fix_suggestion?: string;
   screenshot?: string | null;
+  evidence?: FindingEvidence;
+  confidence?: number | null;
 }
 
-export interface ScanResults {
+export interface ScanError {
+  stage: string;
+  message: string;
+  page?: string | null;
+}
+
+export interface ScanResult {
+  scan_id?: string;
   url: string;
+  status: ScanStatus;
   pages_scanned: number;
+  pages_failed: number;
   issues_found: number;
-  issues: Issue[];
   health_score: number;
   health_status: string;
+  findings: Finding[];
+  errors: ScanError[];
+  started_at?: string;
+  completed_at?: string | null;
+  scan_duration_seconds?: number;
 }
 
-export interface LogLine {
-  id: number;
-  text: string;
+export interface ApiError {
+  status: number;
+  message: string;
 }
 
-export interface AgentStep {
-  id: string;
-  icon: string;
-  label: string;
-  sub: string;
-  logLines: string[];
-}
-
-export interface SevStyle {
-  bg: string;
-  border: string;
-  text: string;
-  dot: string;
-  bloom: string;
-}
-
-export interface UseScannerReturn {
+export interface ScannerState {
   phase: Phase;
-  activeStep: number;
-  doneSteps: number[];
-  logLines: LogLine[];
-  results: ScanResults | null;
+  results: ScanResult | null;
   scannedUrl: string;
+  error: ApiError | null;
+  systemStatus: SystemStatus;
   startScan: (url: string) => Promise<void>;
   reset: () => void;
+  clearError: () => void;
 }

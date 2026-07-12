@@ -1,91 +1,88 @@
-import { useCallback, useState } from "react";
-import { AGENT_STEPS } from "../lib/constants";
-import { scanWebsite } from "../lib/api";
-import type { LogLine, Phase, ScanResults, UseScannerReturn } from "../types";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { getHealth, scanWebsite } from "../lib/api";
+import type {
+  ApiError,
+  Phase,
+  ScanResult,
+  ScannerState,
+  SystemStatus,
+} from "../types";
 
-export function useScanner(): UseScannerReturn {
+export function useScanner(): ScannerState {
   const [phase, setPhase] = useState<Phase>("home");
-  const [activeStep, setActiveStep] = useState<number>(-1);
-  const [doneSteps, setDoneSteps] = useState<number[]>([]);
-  const [logLines, setLogLines] = useState<LogLine[]>([]);
-  const [results, setResults] = useState<ScanResults | null>(null);
-  const [scannedUrl, setScannedUrl] = useState<string>("");
+  const [results, setResults] = useState<ScanResult | null>(null);
+  const [scannedUrl, setScannedUrl] = useState("");
+  const [error, setError] = useState<ApiError | null>(null);
+  const [systemStatus, setSystemStatus] =
+    useState<SystemStatus>("checking");
+  const requestRef = useRef<AbortController | null>(null);
 
-  const [dataReady, setDataReady] = useState(false);
-
-  const addLog = useCallback((text: string): void => {
-    setLogLines((prev) => [...prev, { id: Date.now() + Math.random(), text }]);
-  }, []);
-
-  const delay = (ms: number): Promise<void> =>
-    new Promise((r) => setTimeout(r, ms));
-
-  const startScan = useCallback(
-    async (url: string): Promise<void> => {
-      setScannedUrl(url);
-      setPhase("scanning");
-      setActiveStep(-1);
-      setDoneSteps([]);
-      setLogLines([]);
-      setDataReady(false);
-
-      const apiPromise = scanWebsite(url);
-
-      for (let i = 0; i < AGENT_STEPS.length; i++) {
-        setActiveStep(i);
-        for (const line of AGENT_STEPS[i].logLines) {
-          await delay(380);
-          addLog(line);
+  useEffect(() => {
+    const controller = new AbortController();
+    getHealth(controller.signal)
+      .then(() => setSystemStatus("online"))
+      .catch((requestError: unknown) => {
+        if ((requestError as Error).name !== "AbortError") {
+          setSystemStatus("offline");
         }
-        await delay(500);
-        setDoneSteps((prev) => [...prev, i]);
-      }
-
-      addLog("AWAITING INTELLIGENCE COMPILATION...");
-      setPhase("compiling");
-
-      try {
-        const scanResults = await apiPromise;
-        setResults(scanResults);
-      } catch (err) {
-        setResults({
-          url,
-          pages_scanned: 0,
-          issues_found: 0,
-          health_score: 0,
-          health_status: "Error",
-          issues: [],
-        });
-      } finally {
-        setDataReady(true);
-      }
-    },
-    [addLog],
-  );
-
-  const confirmResults = useCallback((): void => {
-    setPhase("results");
+      });
+    return () => controller.abort();
   }, []);
 
-  const reset = useCallback((): void => {
+  const reset = useCallback(() => {
+    requestRef.current?.abort();
+    requestRef.current = null;
     setPhase("home");
     setResults(null);
-    setLogLines([]);
-    setActiveStep(-1);
-    setDoneSteps([]);
-    setDataReady(false);
+    setScannedUrl("");
+    setError(null);
   }, []);
+
+  const startScan = useCallback(async (url: string) => {
+    requestRef.current?.abort();
+    const controller = new AbortController();
+    requestRef.current = controller;
+
+    setScannedUrl(url);
+    setResults(null);
+    setError(null);
+    setPhase("scanning");
+
+    try {
+      const result = await scanWebsite(url, controller.signal);
+      if (!controller.signal.aborted) {
+        setResults(result);
+        setPhase("results");
+        setSystemStatus("online");
+      }
+    } catch (requestError: unknown) {
+      if ((requestError as Error).name === "AbortError") return;
+
+      const status =
+        typeof (requestError as { status?: unknown }).status === "number"
+          ? ((requestError as { status: number }).status ?? 0)
+          : 0;
+      setError({
+        status,
+        message: (requestError as Error).message || "Unable to complete scan.",
+      });
+      setPhase("home");
+      if (status === 0) setSystemStatus("offline");
+    } finally {
+      if (requestRef.current === controller) requestRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => () => requestRef.current?.abort(), []);
 
   return {
     phase,
-    activeStep,
-    doneSteps,
-    logLines,
     results,
     scannedUrl,
-    dataReady,
+    error,
+    systemStatus,
     startScan,
-    confirmResults,
     reset,
+    clearError: () => setError(null),
   };
 }
